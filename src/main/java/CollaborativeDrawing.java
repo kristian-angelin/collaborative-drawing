@@ -116,58 +116,61 @@ public class CollaborativeDrawing extends Application {
             System.out.println("e: " + e.getUserData());
         });*/
         mouseDragEvent
-            .filter(event -> event.getEventType() == MouseEvent.MOUSE_PRESSED
-                        || event.getEventType() == MouseEvent.MOUSE_RELEASED
-                        || event.getEventType() == MouseEvent.MOUSE_DRAGGED)
-            .subscribe(e ->{
+            .filter(me -> me.getEventType() == MouseEvent.MOUSE_PRESSED
+                        || me.getEventType() == MouseEvent.MOUSE_RELEASED
+                        || me.getEventType() == MouseEvent.MOUSE_DRAGGED)
+            .subscribe(me ->{
                 //Shape currentSelection = (Shape) drawTools.getSelectedToggle().getUserData();
-                if(e.getEventType() == MouseEvent.MOUSE_PRESSED) {
+                if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
                     if(rectangleBtn.isSelected()) {
                         System.out.println("IT IS A RECTANGLE!!!!");
-                        rect.setX(e.getX());
-                        rect.setY(e.getY());
+                        rect.setX(me.getX());
+                        rect.setY(me.getY());
                     } else if(ovalBtn.isSelected()) {
-                        oval.setCenterX(e.getX());
-                        oval.setCenterY(e.getY());
+                        oval.setCenterX(me.getX());
+                        oval.setCenterY(me.getY());
                     } else if(lineBtn.isSelected()) {
-
+                        line.setStartX(me.getX());
+                        line.setStartY(me.getY());
                     } else if(freehandBtn.isSelected()) {
 
                     } else {
                         System.out.println("IT IS NULL!!!");
                     }
                 }
-                if(e.getEventType() == MouseEvent.MOUSE_RELEASED) {
+                if(me.getEventType() == MouseEvent.MOUSE_RELEASED) {
                     if(rectangleBtn.isSelected()) {
                         // Use Math.abs to handle negative numbers
-                        rect.setWidth(Math.abs(e.getX() - rect.getX()));
-                        rect.setHeight(Math.abs(e.getY() - rect.getY()));
+                        rect.setWidth(Math.abs(me.getX() - rect.getX()));
+                        rect.setHeight(Math.abs(me.getY() - rect.getY()));
 
                         // Check if shape is was drawn to a negative coordinates
-                        if(rect.getX() > e.getX()) {
-                            rect.setX(e.getX());
+                        if(rect.getX() > me.getX()) {
+                            rect.setX(me.getX());
                         }
-                        if(rect.getY() > e.getY()) {
-                            rect.setY(e.getY());
+                        if(rect.getY() > me.getY()) {
+                            rect.setY(me.getY());
                         }
 
                         graphicsContext.strokeRect(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight());
                     } else if(ovalBtn.isSelected()) {
                         // Use Math.abs to handle negative numbers
-                        oval.setRadiusX(Math.abs(e.getX() - oval.getCenterX()));
-                        oval.setRadiusY(Math.abs(e.getY() - oval.getCenterY()));
+                        oval.setRadiusX(Math.abs(me.getX() - oval.getCenterX()));
+                        oval.setRadiusY(Math.abs(me.getY() - oval.getCenterY()));
 
                         // Check if shape is was drawn to a negative coordinates
-                        if(oval.getCenterX() > e.getX()) {
-                            oval.setCenterX(e.getX());
+                        if(oval.getCenterX() > me.getX()) {
+                            oval.setCenterX(me.getX());
                         }
-                        if(oval.getCenterY() > e.getY()) {
-                            oval.setCenterY(e.getY());
+                        if(oval.getCenterY() > me.getY()) {
+                            oval.setCenterY(me.getY());
                         }
                         graphicsContext.strokeOval(oval.getCenterX(), oval.getCenterY(), oval.getRadiusX(), oval.getRadiusY());
 
                     } else if(lineBtn.isSelected()) {
-
+                        line.setEndX(me.getX());
+                        line.setEndY(me.getY());
+                        graphicsContext.strokeLine(line.getStartX(), line.getStartY(), line.getEndX(), line.getEndY());
                     } else if(freehandBtn.isSelected()) {
 
                     }
