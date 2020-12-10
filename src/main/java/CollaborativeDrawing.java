@@ -56,11 +56,11 @@ public class CollaborativeDrawing extends Application {
 
         // Shapes used for drawing
         Rectangle rect = new Rectangle();
-        Ellipse ellipse = new Ellipse();
+        Ellipse oval = new Ellipse();
         Line line = new Line();
 
         rectangleBtn.setUserData(rect);
-        ovalBtn.setUserData(ellipse);
+        ovalBtn.setUserData(oval);
         lineBtn.setUserData("Line");
         freehandBtn.setUserData("Freehand");
 
@@ -127,34 +127,49 @@ public class CollaborativeDrawing extends Application {
                         rect.setX(e.getX());
                         rect.setY(e.getY());
                     } else if(ovalBtn.isSelected()) {
-                        ellipse.setCenterX(e.getX());
-                        ellipse.setCenterY(e.getY());
-                        ellipse.setRadiusX(e.getX());
-                        ellipse.setRadiusY(e.getY());
-                        graphicsContext.strokeOval(ellipse.getCenterX(), ellipse.getCenterY(), ellipse.getRadiusX(), ellipse.getRadiusY());
+                        oval.setCenterX(e.getX());
+                        oval.setCenterY(e.getY());
                     } else if(lineBtn.isSelected()) {
 
                     } else if(freehandBtn.isSelected()) {
 
-                    }
-                    else {
+                    } else {
                         System.out.println("IT IS NULL!!!");
                     }
                 }
                 if(e.getEventType() == MouseEvent.MOUSE_RELEASED) {
                     if(rectangleBtn.isSelected()) {
+                        // Use Math.abs to handle negative numbers
                         rect.setWidth(Math.abs(e.getX() - rect.getX()));
                         rect.setHeight(Math.abs(e.getY() - rect.getY()));
 
+                        // Check if shape is was drawn to a negative coordinates
                         if(rect.getX() > e.getX()) {
                             rect.setX(e.getX());
                         }
-
                         if(rect.getY() > e.getY()) {
                             rect.setY(e.getY());
                         }
 
                         graphicsContext.strokeRect(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight());
+                    } else if(ovalBtn.isSelected()) {
+                        // Use Math.abs to handle negative numbers
+                        oval.setRadiusX(Math.abs(e.getX() - oval.getCenterX()));
+                        oval.setRadiusY(Math.abs(e.getY() - oval.getCenterY()));
+
+                        // Check if shape is was drawn to a negative coordinates
+                        if(oval.getCenterX() > e.getX()) {
+                            oval.setCenterX(e.getX());
+                        }
+                        if(oval.getCenterY() > e.getY()) {
+                            oval.setCenterY(e.getY());
+                        }
+                        graphicsContext.strokeOval(oval.getCenterX(), oval.getCenterY(), oval.getRadiusX(), oval.getRadiusY());
+
+                    } else if(lineBtn.isSelected()) {
+
+                    } else if(freehandBtn.isSelected()) {
+
                     }
                 }
             /*System.out.println("X: " + e.getX() + " Y: " + e.getY());
