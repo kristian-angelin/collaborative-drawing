@@ -12,13 +12,13 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Toggle;
-import javafx.scene.control.ToggleButton;
-import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Ellipse;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
@@ -54,29 +54,34 @@ public class CollaborativeDrawing extends Application {
         ToggleButton lineBtn = new ToggleButton("Line");
         ToggleButton freehandBtn = new ToggleButton("Freehand");
 
-        // Shapes used for drawing
-        Rectangle rect = new Rectangle();
-        Ellipse oval = new Ellipse();
-        Line line = new Line();
-
-        rectangleBtn.setUserData(rect);
+        /*rectangleBtn.setUserData(rect);
         ovalBtn.setUserData(oval);
         lineBtn.setUserData("Line");
-        freehandBtn.setUserData("Freehand");
+        freehandBtn.setUserData("Freehand");*/
 
-        ToggleGroup drawTools = new ToggleGroup();
+        ToggleGroup drawTools = new ToggleGroup(); // All shapes in a group for easy select/deselect
 
         rectangleBtn.setToggleGroup(drawTools);
         ovalBtn.setToggleGroup(drawTools);
         lineBtn.setToggleGroup(drawTools);
         freehandBtn.setToggleGroup(drawTools);
 
+        ColorPicker colorPicker = new ColorPicker(Color.BLACK); // Color picker with default color
+
+        // Slider for setting size of strokes
+        Slider slider = new Slider(1, 99, 3);
+        slider.setShowTickLabels(true);
+        slider.setShowTickMarks(true);
+        Label sliderLabel = new Label("Stroke size: " + slider.getValue());
+
+        Button clearCanvasBtn = new Button("Clear canvas");
+
         // Create toolbar with all tools
         VBox toolBox = new VBox(10);
         toolBox.setPadding(new Insets(5));
         toolBox.setStyle("-fx-background-color: #999");
         toolBox.setPrefWidth(150);
-        toolBox.getChildren().addAll(rectangleBtn, ovalBtn, lineBtn, freehandBtn); // Observable list
+        toolBox.getChildren().addAll(rectangleBtn, ovalBtn, lineBtn, freehandBtn, colorPicker, sliderLabel, slider, clearCanvasBtn); // TODO: Remove comment: Observable list
 
         // Create layout panes
         BorderPane pane = new BorderPane();
@@ -89,7 +94,12 @@ public class CollaborativeDrawing extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
 
-        Shape shapeList;
+        // Shapes used for drawing
+        Rectangle rectangle = new Rectangle();
+        Ellipse oval = new Ellipse();
+        Line line = new Line();
+
+        //Shape shapeList;
         //Shape currentSelection;
 
         //Rectangle rect = new Rectangle();
@@ -100,8 +110,21 @@ public class CollaborativeDrawing extends Application {
         //Observable<Toggle> toolSelection = JavaFxObservable.eventsOf(drawTools, ChangeListener<drawTools.getSelectedToggle()>());
         // Set up behaviour
         //var drawToolSelection = JavaFxObservable.valuesOf(drawTools.selectedToggleProperty());
-        //Observable<ActionEvent> selectRectangle = JavaFxObservable.actionEventsOf(rectangleBtn);
+        //Observable<ActionEvent> selectRectangle = JavaFxObservable.actionEventsOf(r)ectangleBtn);
 
+        // Observable checking the color selection
+        JavaFxObservable.actionEventsOf(colorPicker)
+                .subscribe(e -> graphicsContext.setStroke(colorPicker.getValue()));
+
+        JavaFxObservable.valuesOf(slider.valueProperty())
+                .subscribe(e -> {
+                    graphicsContext.setLineWidth(slider.getValue());
+                    sliderLabel.setText("Stroke size: " + String.format("%.1f", slider.getValue()));
+                });
+
+        // Observable clearing canvas on clear canvas button press
+        JavaFxObservable.actionEventsOf(clearCanvasBtn)
+                .subscribe(e -> graphicsContext.clearRect(0,0, canvas.getWidth(),canvas.getHeight()));
 
         /*JavaFxObservable.actionEventsOf((javafx.scene.control.MenuItem) drawTools.getSelectedToggle()).subscribe(e->{
             System.out.println("SHOULD WORK!");
@@ -122,10 +145,11 @@ public class CollaborativeDrawing extends Application {
                         || me.getEventType() == MouseEvent.MOUSE_DRAGGED)
             .subscribe(me ->{
                 //Shape currentSelection = (Shape) drawTools.getSelectedToggle().getUserData();
+                // Begin selected shape on initial mousepress
                 if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
                     if(rectangleBtn.isSelected()) {
-                        rect.setX(me.getX());
-                        rect.setY(me.getY());
+                        rectangle.setX(me.getX());
+                        rectangle.setY(me.getY());
                     } else if(ovalBtn.isSelected()) {
                         oval.setCenterX(me.getX());
                         oval.setCenterY(me.getY());
@@ -135,29 +159,31 @@ public class CollaborativeDrawing extends Application {
                     } else if(freehandBtn.isSelected()) {
                         graphicsContext.beginPath();
                         graphicsContext.lineTo(me.getX(), me.getY());
-                    } else {
-                        System.out.println("IT IS NULL!!!");
                     }
-                } else if (me.getEventType() == MouseEvent.MOUSE_DRAGGED){
+                }
+                // If free draw is selected save mouse movement
+                else if (me.getEventType() == MouseEvent.MOUSE_DRAGGED){
                     if(freehandBtn.isSelected()) {
                         graphicsContext.lineTo(me.getX(), me.getY());
                         graphicsContext.stroke();
                     }
-                } else if(me.getEventType() == MouseEvent.MOUSE_RELEASED) {
+                }
+                // Finnish selected shapes on mouse release
+                else if(me.getEventType() == MouseEvent.MOUSE_RELEASED) {
                     if(rectangleBtn.isSelected()) {
                         // Use Math.abs to handle negative numbers
-                        rect.setWidth(Math.abs(me.getX() - rect.getX()));
-                        rect.setHeight(Math.abs(me.getY() - rect.getY()));
+                        rectangle.setWidth(Math.abs(me.getX() - rectangle.getX()));
+                        rectangle.setHeight(Math.abs(me.getY() - rectangle.getY()));
 
                         // Check if shape is was drawn to a negative coordinates
-                        if(rect.getX() > me.getX()) {
-                            rect.setX(me.getX());
+                        if(rectangle.getX() > me.getX()) {
+                            rectangle.setX(me.getX());
                         }
-                        if(rect.getY() > me.getY()) {
-                            rect.setY(me.getY());
+                        if(rectangle.getY() > me.getY()) {
+                            rectangle.setY(me.getY());
                         }
+                        graphicsContext.strokeRect(rectangle.getX(), rectangle.getY(), rectangle.getWidth(), rectangle.getHeight());
 
-                        graphicsContext.strokeRect(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight());
                     } else if(ovalBtn.isSelected()) {
                         // Use Math.abs to handle negative numbers
                         oval.setRadiusX(Math.abs(me.getX() - oval.getCenterX()));
@@ -176,6 +202,7 @@ public class CollaborativeDrawing extends Application {
                         line.setEndX(me.getX());
                         line.setEndY(me.getY());
                         graphicsContext.strokeLine(line.getStartX(), line.getStartY(), line.getEndX(), line.getEndY());
+
                     } else if(freehandBtn.isSelected()) {
                         graphicsContext.lineTo(me.getX(), me.getY());
                         graphicsContext.stroke();
