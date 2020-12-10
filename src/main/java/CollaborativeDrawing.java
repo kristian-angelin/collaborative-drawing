@@ -101,7 +101,7 @@ public class CollaborativeDrawing extends Application {
         // Set up behaviour
         //var drawToolSelection = JavaFxObservable.valuesOf(drawTools.selectedToggleProperty());
         //Observable<ActionEvent> selectRectangle = JavaFxObservable.actionEventsOf(rectangleBtn);
-        Observable<MouseEvent> mouseDragEvent = JavaFxObservable.eventsOf(canvas, MouseEvent.ANY);
+
 
         /*JavaFxObservable.actionEventsOf((javafx.scene.control.MenuItem) drawTools.getSelectedToggle()).subscribe(e->{
             System.out.println("SHOULD WORK!");
@@ -115,6 +115,7 @@ public class CollaborativeDrawing extends Application {
             System.out.println("SHOULD WORK!");
             System.out.println("e: " + e.getUserData());
         });*/
+        Observable<MouseEvent> mouseDragEvent = JavaFxObservable.eventsOf(canvas, MouseEvent.ANY);
         mouseDragEvent
             .filter(me -> me.getEventType() == MouseEvent.MOUSE_PRESSED
                         || me.getEventType() == MouseEvent.MOUSE_RELEASED
@@ -123,7 +124,6 @@ public class CollaborativeDrawing extends Application {
                 //Shape currentSelection = (Shape) drawTools.getSelectedToggle().getUserData();
                 if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
                     if(rectangleBtn.isSelected()) {
-                        System.out.println("IT IS A RECTANGLE!!!!");
                         rect.setX(me.getX());
                         rect.setY(me.getY());
                     } else if(ovalBtn.isSelected()) {
@@ -133,12 +133,17 @@ public class CollaborativeDrawing extends Application {
                         line.setStartX(me.getX());
                         line.setStartY(me.getY());
                     } else if(freehandBtn.isSelected()) {
-
+                        graphicsContext.beginPath();
+                        graphicsContext.lineTo(me.getX(), me.getY());
                     } else {
                         System.out.println("IT IS NULL!!!");
                     }
-                }
-                if(me.getEventType() == MouseEvent.MOUSE_RELEASED) {
+                } else if (me.getEventType() == MouseEvent.MOUSE_DRAGGED){
+                    if(freehandBtn.isSelected()) {
+                        graphicsContext.lineTo(me.getX(), me.getY());
+                        graphicsContext.stroke();
+                    }
+                } else if(me.getEventType() == MouseEvent.MOUSE_RELEASED) {
                     if(rectangleBtn.isSelected()) {
                         // Use Math.abs to handle negative numbers
                         rect.setWidth(Math.abs(me.getX() - rect.getX()));
@@ -172,7 +177,9 @@ public class CollaborativeDrawing extends Application {
                         line.setEndY(me.getY());
                         graphicsContext.strokeLine(line.getStartX(), line.getStartY(), line.getEndX(), line.getEndY());
                     } else if(freehandBtn.isSelected()) {
-
+                        graphicsContext.lineTo(me.getX(), me.getY());
+                        graphicsContext.stroke();
+                        graphicsContext.closePath();
                     }
                 }
             /*System.out.println("X: " + e.getX() + " Y: " + e.getY());
