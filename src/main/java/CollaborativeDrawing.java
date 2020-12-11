@@ -28,13 +28,13 @@ public class CollaborativeDrawing extends Application {
         GraphicsContext context;
         context = canvas.getGraphicsContext2D();
 
-        // Create buttons for tools
+        // Create buttons for draw shape selection
         ToggleButton rectangleBtn = new ToggleButton("Rectangle");
         ToggleButton ovalBtn = new ToggleButton("Oval");
         ToggleButton lineBtn = new ToggleButton("Line");
         ToggleButton freehandBtn = new ToggleButton("Freehand");
 
-        // All draw shape buttons in a group for easy select/deselect
+        // All shape buttons in a group for easy select/deselect
         ToggleGroup drawTools = new ToggleGroup();
 
         rectangleBtn.setToggleGroup(drawTools);
@@ -57,6 +57,7 @@ public class CollaborativeDrawing extends Application {
         // Create toolbar with all tools
         VBox toolBox = new VBox(13);
         toolBox.setPadding(new Insets(5));
+        // CSS to set style of toolbox
         toolBox.setStyle("-fx-background-color: #e3e3e3;"
                         + "-fx-border-color: #ababab;"
                         + "-fx-border-width: 3;");
@@ -87,7 +88,7 @@ public class CollaborativeDrawing extends Application {
         JavaFxObservable.valuesOf(slider.valueProperty())
                 .subscribe(e -> {
                     context.setLineWidth(slider.getValue());
-                    sliderLabel.setText("Stroke size: " + String.format("%.1f", slider.getValue()));
+                    sliderLabel.setText("Stroke size: " + String.format("%.1f", slider.getValue())); // String.format() for showing only one decimal.
                 });
 
         // Observable clearing canvas on clear canvas button press
@@ -117,14 +118,14 @@ public class CollaborativeDrawing extends Application {
                             context.lineTo(me.getX(), me.getY());
                         }
                     }
-                    // If free draw is selected save mouse movement
+                    // If free draw is selected save mouse movement when dragging
                     else if (me.getEventType() == MouseEvent.MOUSE_DRAGGED){
                         if(freehandBtn.isSelected()) {
                             context.lineTo(me.getX(), me.getY());
                             context.stroke();
                         }
                     }
-                    // Finnish selected shapes on mouse release
+                    // Create selected shapes on mouse release
                     else if(me.getEventType() == MouseEvent.MOUSE_RELEASED) {
                         if(rectangleBtn.isSelected()) {
                             // Use Math.abs to handle negative numbers
