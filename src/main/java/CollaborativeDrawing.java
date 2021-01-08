@@ -375,6 +375,9 @@ public class CollaborativeDrawing extends Application {
                 //out.flush();
                 System.out.println("Client: DATA SENT!");
             }
+            if(server != null) {
+                System.out.println("Sockets list size: " + server.getSocketListSize());
+            }
         }
     }
     void drawOval(GraphicsContext context, MouseEvent me) {

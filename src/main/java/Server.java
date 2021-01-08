@@ -7,24 +7,26 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Server{
+public class Server {
 
     private Observable<Socket> clientConnecting;
     private final int port;
     private ServerSocket serverSocket;
     private DataOutputStream out;
-    private List<String> listString;
+    //private List<String> listString;
     private boolean online;
     Socket socket;
+    private final List<Socket> clientList;
 
     Server(int port) throws IOException {
         this.port = port;
         serverSocket = new ServerSocket(this.port);
-        listString = new ArrayList<>();
-        listString.add("Hej");
-        listString.add("Det fungerar");
-        listString.add("Yay!");
-        System.out.println("listString size: " + listString.size());
+        //listString = new ArrayList<>();
+        clientList = new ArrayList<>();
+        //listString.add("Hej");
+        //listString.add("Det fungerar");
+        //listString.add("Yay!");
+        //System.out.println("listString size: " + listString.size());
     }
 
     /*// Observable for accepting connections
@@ -60,15 +62,17 @@ public class Server{
         online = true;
         return Observable
                 .<Socket>create(e -> {
-                    while(online) {
+                    while (online) {
                         System.out.println("Accepting a connection...");
                         e.onNext(socket = serverSocket.accept());
+                        //clientList.add(socket);
+                        //System.out.println("Added connection to list! Total: " + clientList.size());
                         //out = new DataOutputStream(socket.getOutputStream());
                         //out.writeUTF("Hej " + socket.getRemoteSocketAddress());
                         //out.writeObject(drawHistory().subscribe());
                     }
                 })
-                //.doOnComplete(() -> System.out.println("COMPLETE!"))
+                //.toList(clientList.add()) TODO?!?!?!?!?!
                 .map(Socket::getInputStream)
                 .map(InputStreamReader::new)
                 .map(BufferedReader::new)
@@ -82,6 +86,17 @@ public class Server{
         online = false;
         serverSocket.close();
     }
+
+    Socket acceptSocket() throws IOException {
+        this.socket = serverSocket.accept();
+        clientList.add(socket);
+        System.out.println("Added connection to list! Total: " + clientList.size());
+        return this.socket;
+    }
+    int getSocketListSize() {
+        return clientList.size();
+    }
+}
     /*Observable<DataInputStream> dataStream() {
         return Observable.
                 <DataInputStream>create(e -> {
@@ -105,16 +120,3 @@ public class Server{
                 //.map(InputStreamReader::new)
                 .subscribeOn(Schedulers.io());
     }*/
-
-
-    Observable<String> drawHistory() {
-        //System.out.println("listString size: " + listString.size());
-        return Observable.fromIterable(listString);
-
-    }
-
-    void addRow() {
-        listString.add("New addition!");
-    }
-
-}
