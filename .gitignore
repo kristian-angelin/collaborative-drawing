@@ -22,6 +22,7 @@ dist/
 # Maven
 target/
 dist/
+pom.xml
 
 # JetBrains IDE
 .idea/
@@ -50,5 +51,4 @@ Thumbs.db
 
 # Project based
 *.iml
-pom.xml
 
