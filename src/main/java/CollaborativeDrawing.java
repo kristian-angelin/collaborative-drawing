@@ -1,5 +1,6 @@
 import io.reactivex.Observable;
 import io.reactivex.rxjavafx.observables.JavaFxObservable;
+import io.reactivex.schedulers.Schedulers;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -45,7 +46,7 @@ public class CollaborativeDrawing extends Application {
     public void start(Stage primaryStage) {
 
         // Setup the paintable canvas
-        Canvas canvas = new Canvas(850, 800);
+        Canvas canvas = new Canvas(650, 600);
         GraphicsContext context;
         context = canvas.getGraphicsContext2D();
 
@@ -113,7 +114,7 @@ public class CollaborativeDrawing extends Application {
         pane.setCenter(canvas);
         pane.setBottom(connectionBox);
 
-        Scene scene = new Scene(pane, 1000, 900);
+        Scene scene = new Scene(pane, 800, 700);
         primaryStage.setTitle("Collaborative Drawing");
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -265,8 +266,18 @@ public class CollaborativeDrawing extends Application {
         if(server == null)
         server = new Server(12345);
         networkText.appendText("Start server!" + System.lineSeparator());
-        server.clientConnected()
-                .subscribe(s -> networkText.appendText("Data: " + s + System.lineSeparator()));
+        Observable<Socket> cnn = server.clientConnections();
+        cnn.subscribe(socket1 -> server.addToSocketList(socket1));
+        cnn.map(Socket::getInputStream)
+                .map(InputStreamReader::new)
+                .map(BufferedReader::new)
+                .map(BufferedReader::lines)
+                .flatMap(stream -> Observable
+                        .fromIterable(stream::iterator)).subscribeOn(Schedulers.io())
+            .subscribe(s -> networkText.appendText("Data: " + s + System.lineSeparator()));
+        cnn.subscribe(s -> System.out.println("Socket: " + s.toString()));
+        //server.clientConnections()
+        //        .subscribe(s -> networkText.appendText("Data: " + s + System.lineSeparator()));
         /*server.clientConnected()
                 .subscribe(socket -> networkText.appendText("Client connected from: "
                                                                 + socket.getRemoteSocketAddress()

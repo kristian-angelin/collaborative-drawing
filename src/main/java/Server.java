@@ -21,12 +21,7 @@ public class Server {
     Server(int port) throws IOException {
         this.port = port;
         serverSocket = new ServerSocket(this.port);
-        //listString = new ArrayList<>();
         clientList = new ArrayList<>();
-        //listString.add("Hej");
-        //listString.add("Det fungerar");
-        //listString.add("Yay!");
-        //System.out.println("listString size: " + listString.size());
     }
 
     /*// Observable for accepting connections
@@ -58,9 +53,16 @@ public class Server {
     }*/
 
     // Observable for accepting connections
-    Observable<String> clientConnected() throws IOException {
+    Observable<Socket> clientConnections() throws IOException {
         online = true;
         return Observable
+                .<Socket>create(e -> {
+                    while (online) {
+                        System.out.println("Accepting a connection...");
+                        e.onNext(serverSocket.accept());
+                    }
+                }).subscribeOn(Schedulers.io()).publish().refCount();
+        /*return Observable
                 .<Socket>create(e -> {
                     while (online) {
                         System.out.println("Accepting a connection...");
@@ -79,7 +81,27 @@ public class Server {
                 .map(BufferedReader::lines)
                 .flatMap(stream -> Observable
                         .fromIterable(stream::iterator)).subscribeOn(Schedulers.io())
-                .subscribeOn(Schedulers.io());
+                .subscribeOn(Schedulers.io());*/
+    }
+
+    void startStream() throws IOException {
+        clientConnections()
+                //.flatMap(s -> Observable.just(s)
+                //.subscribeOn(Schedulers.io())
+                .subscribe(socket -> { clientList.add(socket);
+                                    System.out.println("Added connection to list! Total: " + clientList.size());
+
+        });
+    }
+
+    Observable<String> getStream() throws IOException {
+        return clientConnections()
+                .map(Socket::getInputStream)
+                .map(InputStreamReader::new)
+                .map(BufferedReader::new)
+                .map(BufferedReader::lines)
+                .flatMap(stream -> Observable
+                        .fromIterable(stream::iterator)).subscribeOn(Schedulers.io());
     }
 
     void shutDown() throws IOException {
@@ -95,6 +117,10 @@ public class Server {
     }
     int getSocketListSize() {
         return clientList.size();
+    }
+
+    void addToSocketList(Socket sock) {
+        clientList.add(sock);
     }
 }
     /*Observable<DataInputStream> dataStream() {
