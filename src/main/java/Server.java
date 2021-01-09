@@ -61,7 +61,14 @@ public class Server {
                         System.out.println("Accepting a connection...");
                         e.onNext(serverSocket.accept());
                     }
-                }).subscribeOn(Schedulers.io()).publish().refCount();
+                }).subscribeOn(Schedulers.io()).share()// Accepts connections correctly, but subscribe gets
+                .flatMap(s -> Observable.just(s)
+                        .subscribeOn(Schedulers.newThread())).observeOn(Schedulers.io());
+                /*}).subscribeOn(Schedulers.io()) // Accepts connections correctly, but subscribe gets
+                .flatMap(s -> Observable.just(s)    // blocked by other subscribes
+                        .subscribeOn(Schedulers.io())).observeOn(Schedulers.io()).share();*/
+                //}).subscribeOn(Schedulers.io()); // Only gets random sub executed
+                //}).subscribeOn(Schedulers.io()).share(); // Blocks after 1 accept. Exit prints rest.
         /*return Observable
                 .<Socket>create(e -> {
                     while (online) {
