@@ -50,4 +50,5 @@ Thumbs.db
 
 # Project based
 *.iml
+pom.xml
 
