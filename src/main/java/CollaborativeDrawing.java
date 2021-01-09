@@ -263,8 +263,9 @@ public class CollaborativeDrawing extends Application {
         discBtn.setDisable(false);
         connectBtn.setDisable(true);
         hostBtn.setDisable(true);
-        if(server == null)
-        server = new Server(12345);
+        if(server == null) {
+            server = new Server(12345);
+        }
         networkText.appendText("Start server!" + System.lineSeparator());
         Observable<Socket> cnn = server.clientConnections();
         cnn.subscribe(socket1 -> server.addToSocketList(socket1));
@@ -274,7 +275,8 @@ public class CollaborativeDrawing extends Application {
                 .map(BufferedReader::lines)
                 .flatMap(stream -> Observable
                         .fromIterable(stream::iterator)).subscribeOn(Schedulers.io())
-            .subscribe(s -> networkText.appendText("Data: " + s + System.lineSeparator()));
+                .subscribe(s -> networkText.appendText("Data: " + s + System.lineSeparator() +
+                        Thread.currentThread().getName() + System.lineSeparator()));
         cnn.subscribe(s -> System.out.println("Socket: " + s.toString()));
         //server.clientConnections()
         //        .subscribe(s -> networkText.appendText("Data: " + s + System.lineSeparator()));
