@@ -31,6 +31,7 @@ public class CollaborativeDrawing extends Application {
 
     //TODO: REMOVE DEBUG
     private Server server;
+    private Client client;
     private Socket socket;
     private DataOutputStream out;
 
@@ -268,6 +269,7 @@ public class CollaborativeDrawing extends Application {
         }
         networkText.appendText("Start server!" + System.lineSeparator());
 
+        // TODO: Refactor code to server and just call methods?
         Observable<Socket> cnn = server.clientConnections();
         cnn.subscribe(socket1 ->
                 server.addToSocketList(socket1),
@@ -332,13 +334,13 @@ public class CollaborativeDrawing extends Application {
 
     void clientConnect(TextArea networkText) {
         try {
-            socket = new Socket("localhost", 12345);
-            //DataInputStream in = new DataInputStream(socket.getInputStream());
+            client = new Client("localhost", 12345);
 
             networkText.appendText("Connected to server!" + System.lineSeparator());
-            out = new DataOutputStream(socket.getOutputStream());
+            //out = new DataOutputStream(socket.getOutputStream());
             //String test = "Test\n";
-            out.writeUTF(new DrawObject(2.1, 4.4).toStreamableString());
+            //out.writeUTF(new DrawObject(2.1, 4.4).toStreamableString());
+            client.sendToServer(new DrawObject(2.1, 4.4).toStreamableString());
             //out.reset();
             //out.flush();
             //out.writeObject(new DrawObject(20, 3));
@@ -357,8 +359,8 @@ public class CollaborativeDrawing extends Application {
     }
 
     void disconnect() throws IOException {
-        if(socket != null) {
-            socket.close();
+        if(client != null) {
+            client.disconnect();
         }
         if(server != null) {
             server.shutDown();
@@ -401,8 +403,8 @@ public class CollaborativeDrawing extends Application {
             }
             context.strokeRect(rectangle.getX(), rectangle.getY(),
                                 rectangle.getWidth(), rectangle.getHeight());
-            if(socket != null) { // TODO: TEST SENDING OUTPUT FROM CLIENT!
-                out.writeUTF(new DrawObject(10,10).toStreamableString());
+            if(client != null) { // TODO: TEST SENDING OUTPUT FROM CLIENT!
+                client.sendToServer(new DrawObject(10,10).toStreamableString());
                 //out.flush();
                 System.out.println("Client: DATA SENT!");
             }

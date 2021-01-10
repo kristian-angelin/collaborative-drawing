@@ -116,12 +116,12 @@ public class Server {
         serverSocket.close();
     }
 
-    Socket acceptSocket() throws IOException {
+    /*Socket acceptSocket() throws IOException {
         this.socket = serverSocket.accept();
         clientList.add(socket);
         System.out.println("Added connection to list! Total: " + clientList.size());
         return this.socket;
-    }
+    }*/
     int getSocketListSize() {
         return clientList.size();
     }
