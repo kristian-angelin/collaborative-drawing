@@ -278,6 +278,13 @@ public class CollaborativeDrawing extends Application {
                 .map(InputStreamReader::new)
                 .map(BufferedReader::new)
                 .map(BufferedReader::lines)
+                .flatMap(stream -> Observable
+                       .fromIterable(stream::iterator).subscribeOn(Schedulers.io()))
+
+                //.map(BufferedReader::readLine)
+                /*.map(InputStreamReader::new)
+                .map(BufferedReader::new)
+                .map(BufferedReader::lines)*/
                 //.map(StringStream::iterator)
                 //.flatMap(stream -> Observable
                  //       .fromIterable(stream::iterator)).subscribeOn(Schedulers.io())
