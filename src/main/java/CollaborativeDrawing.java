@@ -266,38 +266,34 @@ public class CollaborativeDrawing extends Application {
         hostBtn.setDisable(true);
         if(server == null) {
             server = new Server(12345);
+            server.startServer();
         }
         networkText.appendText("Start server!" + System.lineSeparator());
 
         // TODO: Refactor code to server and just call methods?
-        Observable<Socket> cnn = server.clientConnections();
+        /*Observable<Socket> cnn = server.clientConnections();
         cnn.subscribe(socket1 ->
                 server.addToSocketList(socket1),
                 Throwable::printStackTrace,
                 () -> System.out.println("addToSocketList ended"));
-
-        cnn.map(Socket::getInputStream)
+*/
+        /*cnn.map(Socket::getInputStream)
                 .map(InputStreamReader::new)
                 .map(BufferedReader::new)
                 .map(BufferedReader::lines)
                 .flatMap(stream -> Observable
-                       .fromIterable(stream::iterator).subscribeOn(Schedulers.io()))
+                       .fromIterable(stream::iterator).subscribeOn(Schedulers.io()))*/
 
-                //.map(BufferedReader::readLine)
-                /*.map(InputStreamReader::new)
-                .map(BufferedReader::new)
-                .map(BufferedReader::lines)*/
-                //.map(StringStream::iterator)
-                //.flatMap(stream -> Observable
-                 //       .fromIterable(stream::iterator)).subscribeOn(Schedulers.io())
-                .subscribe(s -> networkText.appendText("Data: " + s + System.lineSeparator() +
-                        Thread.currentThread().getName() + System.lineSeparator()),
+        server.getStream().subscribe(s -> { networkText.appendText("Data: " + s + System.lineSeparator() +
+                        Thread.currentThread().getName() + System.lineSeparator());
+                        System.out.println("Sent to server! Thread: " + Thread.currentThread().getName());
+                        },
                         Throwable::printStackTrace,
                         () -> System.out.println("getInputStream ended"));
-
+/*
         cnn.subscribe(s -> System.out.println("Socket: " + s.toString() + " T: " + Thread.currentThread().getName()),
                 Throwable::printStackTrace,
-                () -> System.out.println("Test subscribe completed"));
+                () -> System.out.println("Test subscribe completed"));*/
         //server.clientConnections()
         //        .subscribe(s -> networkText.appendText("Data: " + s + System.lineSeparator()));
         /*server.clientConnected()
@@ -335,12 +331,17 @@ public class CollaborativeDrawing extends Application {
     void clientConnect(TextArea networkText) {
         try {
             client = new Client("localhost", 12345);
-
+            client.start();
             networkText.appendText("Connected to server!" + System.lineSeparator());
             //out = new DataOutputStream(socket.getOutputStream());
             //String test = "Test\n";
             //out.writeUTF(new DrawObject(2.1, 4.4).toStreamableString());
-            client.sendToServer(new DrawObject(2.1, 4.4).toStreamableString());
+            //client.sendToServer(new DrawObject(2.1, 4.4).toStreamableString());
+            //client.sendToServer(new DrawObject(2.1, 4.4).toStreamableString());
+            client.serverStream().subscribe(s -> networkText.appendText("Data: " + s + System.lineSeparator() +
+                    Thread.currentThread().getName() + System.lineSeparator()));
+            client.sendToServer(new DrawObject(1.0, 1.0).toStreamableString());
+            //client.sendToServer(new DrawObject(2.0, 2.0).toStreamableString());
             //out.reset();
             //out.flush();
             //out.writeObject(new DrawObject(20, 3));

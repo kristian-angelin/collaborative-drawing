@@ -11,12 +11,22 @@ import java.net.Socket;
 
 public class Client {
 
+    //private final String address;
+    //private final int port;
+
     private Socket socket;
     private DataOutputStream out;
 
     Client(String address, int port) throws IOException {
+        //this.address = address;
+        //this.port = port;
         socket = new Socket(address, port);
         out = new DataOutputStream(socket.getOutputStream());
+    }
+
+    void start() throws IOException {
+        //socket = new Socket(address, port);
+        //out = new DataOutputStream(socket.getOutputStream());
     }
 
     void disconnect() throws IOException {
@@ -25,13 +35,16 @@ public class Client {
 
     Observable<String> serverStream() {
         return Observable
-                .just(socket)
+                .<Socket>create(e -> e.onNext(socket))
+                .subscribeOn(Schedulers.io())
+                .share()
                 .map(Socket::getInputStream)
                 .map(InputStreamReader::new)
                 .map(BufferedReader::new)
                 .map(BufferedReader::lines)
                 .flatMap(stream -> Observable
-                        .fromIterable(stream::iterator).subscribeOn(Schedulers.io()));
+                        .fromIterable(stream::iterator).subscribeOn(Schedulers.newThread()))
+                .observeOn(Schedulers.io());
     }
 
     void sendToServer(String msg) throws IOException {

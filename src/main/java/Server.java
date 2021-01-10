@@ -9,21 +9,29 @@ import java.util.List;
 
 public class Server {
 
-    private Observable<Socket> clientConnecting;
-    private final int port;
-    private ServerSocket serverSocket;
+    private Observable<Socket> clients;
+    private int port;
+    private final ServerSocket serverSocket;
     private DataOutputStream out;
     //private List<String> listString;
-    private boolean online;
-    Socket socket;
+    private boolean online = true;
+    //Socket socket;
     private final List<Socket> clientList;
 
     Server(int port) throws IOException {
-        this.port = port;
-        serverSocket = new ServerSocket(this.port);
+        //this.port = port;
+        serverSocket = new ServerSocket(port);
         clientList = new ArrayList<>();
     }
 
+    void startServer() throws IOException {
+        //clientList = new ArrayList<>();
+        //serverSocket = new ServerSocket(port);
+        clients = clientConnections();
+        clients.subscribe(this::addToSocketList);
+        //getStream().subscribe(this::sendToClients);
+        sendToClients();
+    }
     /*// Observable for accepting connections
     Observable<ObjectInputStream> clientConnected() throws IOException {
         online = true;
@@ -54,16 +62,16 @@ public class Server {
 
     // Observable for accepting connections
     Observable<Socket> clientConnections() throws IOException {
-        online = true;
         return Observable
                 .<Socket>create(e -> {
                     while (online) {
                         System.out.println("Accepting a connection...");
                         e.onNext(serverSocket.accept());
                     }
-                }).subscribeOn(Schedulers.io()).share()// Accepts connections correctly, but subscribe gets
+                }).share().subscribeOn(Schedulers.io())// Accepts connections correctly, but subscribe gets
                 .flatMap(s -> Observable.just(s)
-                        .subscribeOn(Schedulers.newThread())).observeOn(Schedulers.io());
+                        .subscribeOn(Schedulers.io()))
+                .observeOn(Schedulers.io());
                 /*}).subscribeOn(Schedulers.io()) // Accepts connections correctly, but subscribe gets
                 .flatMap(s -> Observable.just(s)    // blocked by other subscribes
                         .subscribeOn(Schedulers.io())).observeOn(Schedulers.io()).share();*/
@@ -91,7 +99,7 @@ public class Server {
                 .subscribeOn(Schedulers.io());*/
     }
 
-    void startStream() throws IOException {
+    /*void startStream() throws IOException {
         clientConnections()
                 //.flatMap(s -> Observable.just(s)
                 //.subscribeOn(Schedulers.io())
@@ -99,16 +107,23 @@ public class Server {
                                     System.out.println("Added connection to list! Total: " + clientList.size());
 
         });
-    }
+    }*/
 
     Observable<String> getStream() throws IOException {
-        return clientConnections()
+        return clients
                 .map(Socket::getInputStream)
                 .map(InputStreamReader::new)
                 .map(BufferedReader::new)
                 .map(BufferedReader::lines)
                 .flatMap(stream -> Observable
-                        .fromIterable(stream::iterator)).subscribeOn(Schedulers.io());
+                        .fromIterable(stream::iterator).subscribeOn(Schedulers.io()))
+                .share()
+                .observeOn(Schedulers.io());
+                //.subscribeOn(Schedulers.io())
+                //.replay()
+                //.autoConnect();
+
+        //.publish().autoConnect();
     }
 
     void shutDown() throws IOException {
@@ -128,6 +143,18 @@ public class Server {
 
     void addToSocketList(Socket sock) {
         clientList.add(sock);
+    }
+
+    void sendToClients() throws IOException {
+        getStream().subscribe(data ->
+                {
+                    System.out.println("Sent to clients! Thread: " + Thread.currentThread().getName());
+                    for(Socket s: clientList) {
+                        out = new DataOutputStream(s.getOutputStream());
+                        out.writeUTF(data);
+                    }
+                }
+        );
     }
 }
     /*Observable<DataInputStream> dataStream() {
