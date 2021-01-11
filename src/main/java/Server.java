@@ -1,5 +1,7 @@
 import io.reactivex.Observable;
 import io.reactivex.ObservableTransformer;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.internal.operators.observable.ObservableEmpty;
 import io.reactivex.schedulers.Schedulers;
 
 import java.io.*;
@@ -13,7 +15,6 @@ import java.util.stream.Stream;
 public class Server {
 
     private Observable<Socket> clients;
-    private int port;
     private final ServerSocket serverSocket;
     //private DataOutputStream out;
     //private OutputStreamWriter out;
@@ -23,22 +24,24 @@ public class Server {
     //private final List<Socket> clientList;
     //private final ConcurrentHashMap<Socket, OutputStreamWriter> list;
     private final ConcurrentHashMap<Socket, ObjectOutputStream> list;
+    private Disposable disp;
 
     Server(int port) throws IOException {
-        //this.port = port;
+        //System.out.println("[EXECUTING] new serverSocket()");
         serverSocket = new ServerSocket(port);
-        //clientList = new ArrayList<>();
         list = new ConcurrentHashMap<>();
+        //System.out.println("[EXECUTING] server.startServer()");
+        startServer();
     }
 
-    void startServer() throws IOException {
-        //clientList = new ArrayList<>();
-        //serverSocket = new ServerSocket(port);
+    void startServer() {
+        //System.out.println("[EXECUTING] clientConnections()");
         clients = clientConnections();
-        clients.subscribe(this::addToSocketList,
+        //(System.out.println("[EXECUTING] clients.subscribe()");
+        disp = clients.subscribe(this::addToSocketList,
                 throwable -> System.out.println("Server shutdown: " + throwable.toString()));
-        //getStream().subscribe(this::sendToClients);
-        //sendToClients();
+        //System.out.println("Server local address: " + serverSocket.getLocalSocketAddress());
+        //System.out.println("Server inet address: " + serverSocket.getInetAddress());
     }
     /*// Observable for accepting connections
     Observable<ObjectInputStream> clientConnected() throws IOException {
@@ -78,7 +81,9 @@ public class Server {
                             e.onNext(serverSocket.accept());
                         }
                     } catch (IOException ex) {
-                        e.onError(ex);
+                        if(!e.isDisposed()) {
+                            e.onError(ex);
+                        }
                     }
                 }).subscribeOn(Schedulers.io()).share()// Accepts connections correctly, but subscribe gets
                 .flatMap(s -> Observable.just(s)
@@ -169,10 +174,16 @@ public class Server {
                             e.onNext(or.readObject());
                         }
                     } catch (EOFException ex) {
-                        e.onError(ex);
+                        if(!e.isDisposed()) {
+                            //or.close();
+                            //e.onError(ex);
+                            System.err.println("Socket closed: " + ex);
+                        }
                     }
                 }).subscribeOn(Schedulers.io()))
-                .map(object -> (DrawObject)object);
+                .map(object -> (DrawObject)object)
+                //.onErrorReturn(error -> new DrawObject())
+                ;
                 /*.map(BufferedReader::new)
                 .map(BufferedReader::lines)
                 //.share()
@@ -212,9 +223,14 @@ public class Server {
                 .map(Socket::toString);
     }*/
 
-    void shutDown() throws IOException {
+    void shutDown() {
         online = false;
-        serverSocket.close();
+        disp.dispose();
+        try {
+            serverSocket.close();
+        } catch (IOException e) {
+            System.err.println("Socket already closed!");
+        }
     }
 
     /*Socket acceptSocket() throws IOException {
@@ -284,6 +300,8 @@ public class Server {
     Observable<Socket> getClientsVar(){
         return clients;
     }
+
+    ServerSocket getServerSocket() {return serverSocket;} // TODO: REMOVE DEBUG
 }
     /*Observable<DataInputStream> dataStream() {
         return Observable.

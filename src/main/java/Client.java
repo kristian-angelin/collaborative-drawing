@@ -9,12 +9,9 @@ import java.net.SocketException;
 
 public class Client {
 
-    //private final String address;
-    //private final int port;
-
     private final Socket socket;
     //private DataOutputStream out;
-    private ObjectOutputStream out;
+    private final ObjectOutputStream out;
     //private OutputStreamWriter out;
 
     Client(String address, int port) throws IOException {
@@ -31,8 +28,12 @@ public class Client {
         //out = new DataOutputStream(socket.getOutputStream());
     }*/
 
-    void disconnect() throws IOException {
-        socket.close();
+    void disconnect(){
+        try {
+            socket.close();
+        } catch (IOException e) {
+            System.err.println(e.toString());
+        }
     }
 
     Observable<DrawObject> serverStream() {
@@ -46,7 +47,9 @@ public class Client {
                             e.onNext(or.readObject());
                         }
                     } catch (Exception ex) {
-                        e.onError(ex);
+                        if(!e.isDisposed()) {
+                            e.onError(ex);
+                        }
                     }
 
                 }).subscribeOn(Schedulers.newThread()))
@@ -92,7 +95,7 @@ public class Client {
             System.out.println("[SENT]" + data.toString() + "[TO]" + socket.getRemoteSocketAddress());
             System.out.println("[OWN]" + socket.getLocalSocketAddress());
         } catch (IOException e) {
-            System.err.println("Socketerror!!");
+            System.err.println(e.toString());
         }
     }
     /*void sendToServer(DrawObject obj) throws IOException {
