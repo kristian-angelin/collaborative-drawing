@@ -1,6 +1,5 @@
 import io.reactivex.Observable;
 import io.reactivex.rxjavafx.observables.JavaFxObservable;
-import io.reactivex.schedulers.Schedulers;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -19,6 +18,7 @@ import javafx.stage.Stage;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 
 public class CollaborativeDrawing extends Application {
 
@@ -283,13 +283,36 @@ public class CollaborativeDrawing extends Application {
                 .map(BufferedReader::lines)
                 .flatMap(stream -> Observable
                        .fromIterable(stream::iterator).subscribeOn(Schedulers.io()))*/
-
-        server.getStream().subscribe(s -> { networkText.appendText("Data: " + s + System.lineSeparator() +
-                        Thread.currentThread().getName() + System.lineSeparator());
-                        System.out.println("Sent to server! Thread: " + Thread.currentThread().getName());
+        Observable<Socket> sock = server.getClientsVar();
+        //Observable<Socket> sck = server.getStream();
+        //sck.subscribe(socket1 -> System.out.println("Socket sent to server!"));
+        /*sock.compose(Server.getStream())
+            .subscribe(s -> { networkText.appendText("Data: " + s + System.lineSeparator() +
+                    Thread.currentThread().getName() + System.lineSeparator());
+                    System.out.println("Sent to server! Thread: " + Thread.currentThread().getName());
+                    },
+                    Throwable::printStackTrace,
+                    () -> System.out.println("getInputStream ended"));*/
+        sock.compose(Server.getStream())
+            .subscribe(data -> {
+                        networkText.appendText("Data: " + data.toString() + System.lineSeparator() +
+                                                Thread.currentThread().getName() + System.lineSeparator());
+                        server.sendToClients(data);
+                    },
+                    throwable -> {
+                        networkText.appendText("Server shutdown!" + System.lineSeparator());
+                        System.out.println("Server shutdown: " + throwable.toString());
+                    });
+        /*sock.compose(Server.getStream())
+                .subscribe(data -> {
+                            networkText.appendText("Data: " + data + System.lineSeparator() +
+                                    Thread.currentThread().getName() + System.lineSeparator());
+                            server.sendToClients(data);
                         },
-                        Throwable::printStackTrace,
-                        () -> System.out.println("getInputStream ended"));
+                        Throwable::printStackTrace);*/
+        /*sock.compose(Server.getStream())
+            .subscribe(data -> {server.sendToClients(data);
+                                System.out.println("Sent to clients! Thread: " + Thread.currentThread().getName());});*/
 /*
         cnn.subscribe(s -> System.out.println("Socket: " + s.toString() + " T: " + Thread.currentThread().getName()),
                 Throwable::printStackTrace,
@@ -329,34 +352,45 @@ public class CollaborativeDrawing extends Application {
     }
 
     void clientConnect(TextArea networkText) {
+        // Connect to server
         try {
             client = new Client("localhost", 12345);
-            client.start();
             networkText.appendText("Connected to server!" + System.lineSeparator());
-            //out = new DataOutputStream(socket.getOutputStream());
-            //String test = "Test\n";
-            //out.writeUTF(new DrawObject(2.1, 4.4).toStreamableString());
-            //client.sendToServer(new DrawObject(2.1, 4.4).toStreamableString());
-            //client.sendToServer(new DrawObject(2.1, 4.4).toStreamableString());
-            client.serverStream().subscribe(s -> networkText.appendText("Data: " + s + System.lineSeparator() +
-                    Thread.currentThread().getName() + System.lineSeparator()));
-            client.sendToServer(new DrawObject(1.0, 1.0).toStreamableString());
-            //client.sendToServer(new DrawObject(2.0, 2.0).toStreamableString());
-            //out.reset();
-            //out.flush();
-            //out.writeObject(new DrawObject(20, 3));
-            //out.reset();
-            //out.flush();
-            /*Observable.<String>create(e -> {
-                networkText.appendText("Got: " + in.readUTF()); //TODO!!! GET CLIENT READING!!!!
-            })
-            .subscribe(s -> networkText.appendText("Recieved: " + s + System.lineSeparator()));*/
-            discBtn.setDisable(false);
-            connectBtn.setDisable(true);
-            hostBtn.setDisable(true);
         } catch (IOException e) {
             networkText.appendText("Unable to connect to server!" + System.lineSeparator());
         }
+        //out = new DataOutputStream(socket.getOutputStream());
+        //String test = "Test\n";
+        //out.writeUTF(new DrawObject(2.1, 4.4).toStreamableString());
+        //client.sendToServer(new DrawObject(2.1, 4.4).toStreamableString());
+        //client.sendToServer(new DrawObject(2.1, 4.4).toStreamableString());
+        Observable<DrawObject> obs = client.serverStream();
+        //Observable<String> obs = client.serverStream();
+
+        obs.subscribe(data -> {
+                networkText.appendText("Data: " + data.toString() + System.lineSeparator() +
+                                        Thread.currentThread().getName() + System.lineSeparator());
+                System.out.println("[RECEIVED]" + data.toString() + System.lineSeparator());
+            },
+                throwable -> {
+                networkText.appendText("Disconnected from server!" + System.lineSeparator());
+                System.out.println("Connection to server lost: " + throwable.toString());
+            });
+        //client.sendToServer(new DrawObject(1.0, 1.0).toStreamString());
+        client.sendToServer(new DrawObject(1.0, 1.0));
+        //client.sendToServer(new DrawObject(2.0, 2.0));
+        //out.reset();
+        //out.flush();
+        //out.writeObject(new DrawObject(20, 3));
+        //out.reset();
+        //out.flush();
+        /*Observable.<String>create(e -> {
+            networkText.appendText("Got: " + in.readUTF()); //TODO!!! GET CLIENT READING!!!!
+        })
+        .subscribe(s -> networkText.appendText("Recieved: " + s + System.lineSeparator()));*/
+        discBtn.setDisable(false);
+        connectBtn.setDisable(true);
+        hostBtn.setDisable(true);
     }
 
     void disconnect() throws IOException {
@@ -405,7 +439,8 @@ public class CollaborativeDrawing extends Application {
             context.strokeRect(rectangle.getX(), rectangle.getY(),
                                 rectangle.getWidth(), rectangle.getHeight());
             if(client != null) { // TODO: TEST SENDING OUTPUT FROM CLIENT!
-                client.sendToServer(new DrawObject(10,10).toStreamableString());
+                //client.sendToServer(new DrawObject(10,10).toStreamString());
+                client.sendToServer(new DrawObject(10,10));
                 //out.flush();
                 System.out.println("Client: DATA SENT!");
             }
