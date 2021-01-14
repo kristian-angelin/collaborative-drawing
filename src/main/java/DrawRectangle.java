@@ -39,7 +39,7 @@ public class DrawRectangle extends DrawObject {
         return "DrawRectangle{" +
                 "height=" + height +
                 ", width=" + width +
-                //super.toString() +
+                super.toString() +
                 '}';
     }
 }

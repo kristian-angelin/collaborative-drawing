@@ -26,7 +26,7 @@ public class CollaborativeDrawing extends Application {
 
     // Shapes used for drawing
     private final DrawRectangle rectangle = new DrawRectangle();
-    private final Ellipse oval = new Ellipse();
+    private final DrawOval oval = new DrawOval();
     private final Line line = new Line();
 
     //TODO: REMOVE DEBUG
@@ -386,37 +386,31 @@ public class CollaborativeDrawing extends Application {
                 rectangle.setY(me.getY());
             }
             rectangle.toCanvas(context);
-            if(client != null) {
-                client.sendToServer(rectangle);
-                //System.out.println("[SEND] " + rectangle.toString());
-            }
-            if(server != null) {
-                server.sendToClients(rectangle);
-                System.out.println("Sockets list size: " + server.getSocketListSize());
-                //System.out.println("[SEND] " + rectangle.toString());
-            }
+            sendDrawObject(rectangle);
         }
     }
     void drawOval(MouseEvent me) {
         if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
-            oval.setCenterX(me.getX());
-            oval.setCenterY(me.getY());
+            oval.setX(me.getX());
+            oval.setY(me.getY());
         } else if(me.getEventType() == MouseEvent.MOUSE_RELEASED) {
             // Use Math.abs to handle negative numbers
-            oval.setRadiusX(Math.abs(me.getX() - oval.getCenterX()));
-            oval.setRadiusY(Math.abs(me.getY() - oval.getCenterY()));
+            oval.setRadiusX(Math.abs(me.getX() - oval.getX()));
+            oval.setRadiusY(Math.abs(me.getY() - oval.getY()));
 
             // Check if shape is was drawn to a negative coordinates
-            if(oval.getCenterX() > me.getX()) {
-                oval.setCenterX(me.getX());
+            if(oval.getX() > me.getX()) {
+                oval.setX(me.getX());
             }
-            if(oval.getCenterY() > me.getY()) {
-                oval.setCenterY(me.getY());
+            if(oval.getY() > me.getY()) {
+                oval.setY(me.getY());
             }
-            context.strokeOval(oval.getCenterX(), oval.getCenterY(), oval.getRadiusX(), oval.getRadiusY());
-
+            //context.strokeOval(oval.getCenterX(), oval.getCenterY(), oval.getRadiusX(), oval.getRadiusY());
+            oval.toCanvas(context);
+            sendDrawObject(oval);
         }
     }
+
     void drawLine(MouseEvent me) {
         if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
             line.setStartX(me.getX());
@@ -428,10 +422,25 @@ public class CollaborativeDrawing extends Application {
         }
     }
 
+    // Sends object to server or clients
+    void sendDrawObject(DrawObject drawObject) {
+        if(client != null) {
+            client.sendToServer(drawObject);
+            //System.out.println("[SEND] " + rectangle.toString());
+        }
+        if(server != null) {
+            server.sendToClients(drawObject);
+            System.out.println("Sockets list size: " + server.getSocketListSize());
+            //System.out.println("[SEND] " + rectangle.toString());
+        }
+    }
+
     void updateShapeColors(Paint color) {
         rectangle.setColor(color);
+        oval.setColor(color);
     }
     void updateShapeStrokeWidth(double width) {
         rectangle.setStrokeWidth(width);
+        oval.setStrokeWidth(width);
     }
 }
