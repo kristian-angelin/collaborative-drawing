@@ -13,12 +13,12 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
-import javafx.scene.shape.Ellipse;
-import javafx.scene.shape.Line;
 import javafx.stage.Stage;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CollaborativeDrawing extends Application {
     private GraphicsContext context;
@@ -28,7 +28,11 @@ public class CollaborativeDrawing extends Application {
     private final DrawRectangle rectangle = new DrawRectangle();
     private final DrawOval oval = new DrawOval();
     private final DrawLine line = new DrawLine();
-
+    private final DrawFreeHand freeHand = new DrawFreeHand();
+    // Store draw points for freehand drawing
+    private final ArrayList<Double> xPoints = new ArrayList<>();
+    private final ArrayList<Double> yPoints = new ArrayList<>();
+;
     //TODO: REMOVE DEBUG
     private Server server;
     private Client client;
@@ -155,11 +159,6 @@ public class CollaborativeDrawing extends Application {
         Observable<MouseEvent> drag = JavaFxObservable.eventsOf(canvas, MouseEvent.MOUSE_DRAGGED);
         Observable<MouseEvent> release = JavaFxObservable.eventsOf(canvas, MouseEvent.MOUSE_RELEASED);
 
-        /*Observable<drawEvent> drawEvent = Observable.merge(click, drag, release)
-                .map()*/
-
-        /*Observable.merge(click, drag, release) // TODO: Remove freehand all
-                .subscribe(me -> drawFreehand(context, me));*/
 
         Observable.merge(click, drag, release)
                 .filter(e -> freehandBtn.isSelected())
@@ -174,92 +173,6 @@ public class CollaborativeDrawing extends Application {
                 .filter(e -> lineBtn.isSelected())
                 .subscribe(me -> drawLine(me));
 
-        /*Observable.merge(observable2, observable3) TODO: ONLY DOIN DRAWLINE
-                .subscribe(me -> drawLine(context, me));*/
-
-
-       /* JavaFxObservable.eventsOf(canvas, MouseEvent.MOUSE_DRAGGED)
-                .takeWhile(e -> freehandBtn.isSelected())
-                .subscribe(me -> drawLine(context, me));
-
-        JavaFxObservable.eventsOf(canvas, MouseEvent.MOUSE_RELEASED)
-                .takeWhile(e -> freehandBtn.isSelected())
-                .subscribe(me -> drawLine(context, me));*/
-
-
-        // Observable for handling mouse events on the canvas (painting)
-        /*JavaFxObservable.eventsOf(canvas, MouseEvent.ANY)
-                .filter(me -> me.getEventType() == MouseEvent.MOUSE_PRESSED
-                        || me.getEventType() == MouseEvent.MOUSE_RELEASED
-                        || me.getEventType() == MouseEvent.MOUSE_DRAGGED)
-                .subscribe(me ->{
-
-                    // Begin selected shape on initial mouse press
-                    if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
-                        if(rectangleBtn.isSelected()) {
-                            rectangle.setX(me.getX());
-                            rectangle.setY(me.getY());
-                        } else if(ovalBtn.isSelected()) {
-                            oval.setCenterX(me.getX());
-                            oval.setCenterY(me.getY());
-                        } else if(lineBtn.isSelected()) {
-                            line.setStartX(me.getX());
-                            line.setStartY(me.getY());
-                        } else if(freehandBtn.isSelected()) {
-                            context.beginPath();
-                            context.lineTo(me.getX(), me.getY());
-                        }
-                    }
-                    // If free draw is selected save mouse movement when dragging
-                    else if (me.getEventType() == MouseEvent.MOUSE_DRAGGED){
-                        if(freehandBtn.isSelected()) {
-                            context.lineTo(me.getX(), me.getY());
-                            context.stroke();
-                        }
-                    }
-                    // Create selected shapes on mouse release
-                    else if(me.getEventType() == MouseEvent.MOUSE_RELEASED) {
-                        if(rectangleBtn.isSelected()) {
-                            // Use Math.abs to handle negative numbers
-                            rectangle.setWidth(Math.abs(me.getX() - rectangle.getX()));
-                            rectangle.setHeight(Math.abs(me.getY() - rectangle.getY()));
-
-                            // Check if shape is was drawn to a negative coordinates
-                            if(rectangle.getX() > me.getX()) {
-                                rectangle.setX(me.getX());
-                            }
-                            if(rectangle.getY() > me.getY()) {
-                                rectangle.setY(me.getY());
-                            }
-                            context.strokeRect(rectangle.getX(), rectangle.getY(), rectangle.getWidth(), rectangle.getHeight());
-
-                        } else if(ovalBtn.isSelected()) {
-                            // Use Math.abs to handle negative numbers
-                            oval.setRadiusX(Math.abs(me.getX() - oval.getCenterX()));
-                            oval.setRadiusY(Math.abs(me.getY() - oval.getCenterY()));
-
-                            // Check if shape is was drawn to a negative coordinates
-                            if(oval.getCenterX() > me.getX()) {
-                                oval.setCenterX(me.getX());
-                            }
-                            if(oval.getCenterY() > me.getY()) {
-                                oval.setCenterY(me.getY());
-                            }
-                            context.strokeOval(oval.getCenterX(), oval.getCenterY(), oval.getRadiusX(), oval.getRadiusY());
-
-                        } else if(lineBtn.isSelected()) {
-                            line.setEndX(me.getX());
-                            line.setEndY(me.getY());
-                            context.strokeLine(line.getStartX(), line.getStartY(), line.getEndX(), line.getEndY());
-
-                        } else if(freehandBtn.isSelected()) {
-                            System.out.println("Closed path");
-                            context.lineTo(me.getX(), me.getY());
-                            context.stroke();
-                            context.closePath();
-                        }
-                    }
-                });*/
     }
     // TODO: EXCEPTIONS!!!
     void startServer(TextArea networkText) { //TODO: Remove debug stuff!
@@ -357,17 +270,33 @@ public class CollaborativeDrawing extends Application {
 
     void drawFreehand(MouseEvent me) throws IOException {
         if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
+            xPoints.clear();
+            yPoints.clear();
+            xPoints.add(me.getX());
+            yPoints.add(me.getY());
+
             context.beginPath();
             context.lineTo(me.getX(), me.getY());
+            context.stroke();
         } else if(me.getEventType() == MouseEvent.MOUSE_DRAGGED) {
+            xPoints.add(me.getX());
+            yPoints.add(me.getY());
+
             context.lineTo(me.getX(), me.getY());
             context.stroke();
         } else if(me.getEventType() == MouseEvent.MOUSE_RELEASED) {
+            xPoints.add(me.getX());
+            yPoints.add(me.getY());
+
             context.lineTo(me.getX(), me.getY());
             context.stroke();
             context.closePath();
+            freeHand.addPoints(xPoints, yPoints);
+            sendDrawObject(freeHand);
         }
+
     }
+
     void drawRectangle(MouseEvent me) {
         if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
             rectangle.setX(me.getX());
@@ -405,7 +334,7 @@ public class CollaborativeDrawing extends Application {
             if(oval.getY() > me.getY()) {
                 oval.setY(me.getY());
             }
-            //context.strokeOval(oval.getCenterX(), oval.getCenterY(), oval.getRadiusX(), oval.getRadiusY());
+
             oval.toCanvas(context);
             sendDrawObject(oval);
         }
@@ -418,7 +347,7 @@ public class CollaborativeDrawing extends Application {
         } else if(me.getEventType() == MouseEvent.MOUSE_RELEASED) {
             line.setEndX(me.getX());
             line.setEndY(me.getY());
-            //context.strokeLine(line.getStartX(), line.getStartY(), line.getEndX(), line.getEndY());
+            // Draw line and send object
             line.toCanvas(context);
             sendDrawObject(line);
         }
@@ -441,10 +370,12 @@ public class CollaborativeDrawing extends Application {
         rectangle.setColor(color);
         oval.setColor(color);
         line.setColor(color);
+        freeHand.setColor(color);
     }
     void updateShapeStrokeWidth(double width) {
         rectangle.setStrokeWidth(width);
         oval.setStrokeWidth(width);
         line.setStrokeWidth(width);
+        freeHand.setStrokeWidth(width);
     }
 }
