@@ -27,7 +27,7 @@ public class CollaborativeDrawing extends Application {
     // Shapes used for drawing
     private final DrawRectangle rectangle = new DrawRectangle();
     private final DrawOval oval = new DrawOval();
-    private final Line line = new Line();
+    private final DrawLine line = new DrawLine();
 
     //TODO: REMOVE DEBUG
     private Server server;
@@ -413,12 +413,14 @@ public class CollaborativeDrawing extends Application {
 
     void drawLine(MouseEvent me) {
         if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
-            line.setStartX(me.getX());
-            line.setStartY(me.getY());
+            line.setX(me.getX());
+            line.setY(me.getY());
         } else if(me.getEventType() == MouseEvent.MOUSE_RELEASED) {
             line.setEndX(me.getX());
             line.setEndY(me.getY());
-            context.strokeLine(line.getStartX(), line.getStartY(), line.getEndX(), line.getEndY());
+            //context.strokeLine(line.getStartX(), line.getStartY(), line.getEndX(), line.getEndY());
+            line.toCanvas(context);
+            sendDrawObject(line);
         }
     }
 
@@ -438,9 +440,11 @@ public class CollaborativeDrawing extends Application {
     void updateShapeColors(Paint color) {
         rectangle.setColor(color);
         oval.setColor(color);
+        line.setColor(color);
     }
     void updateShapeStrokeWidth(double width) {
         rectangle.setStrokeWidth(width);
         oval.setStrokeWidth(width);
+        line.setStrokeWidth(width);
     }
 }

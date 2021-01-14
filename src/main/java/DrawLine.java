@@ -1,18 +1,18 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
-public class DrawOval extends DrawObject {
+public class DrawLine extends DrawObject {
 
-    private double radiusX;
-    private double radiusY;
+    private double endX;
+    private double endY;
 
-    DrawOval() {}
+    DrawLine(){}
 
-    public void setRadiusX(double radiusX) {
-        this.radiusX = radiusX;
+    public void setEndX(double endX) {
+        this.endX = endX;
     }
-    public void setRadiusY(double radiusY) {
-        this.radiusY = radiusY;
+    public void setEndY(double endY) {
+        this.endY = endY;
     }
 
     @Override
@@ -23,7 +23,7 @@ public class DrawOval extends DrawObject {
         // Set properties and paint oval
         context.setLineWidth(getStrokeWidth());
         context.setStroke(getLineColor());
-        context.strokeOval(getX(), getY(), radiusX, radiusY);
+        context.strokeLine(getX(), getY(), endX, endY);
         // Restore color/stroke width
         context.setLineWidth(tempLineWidth);
         context.setStroke(tempColor);
@@ -32,10 +32,9 @@ public class DrawOval extends DrawObject {
     @Override
     public String toString() {
         return "DrawLine{" +
-                "radiusX=" + radiusX +
-                ", radiusY=" + radiusY +
+                "endX=" + endX +
+                ", endY=" + endY +
                 super.toString() +
                 '}';
     }
-
 }
