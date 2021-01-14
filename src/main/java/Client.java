@@ -52,10 +52,13 @@ public class Client {
                         }
                     }
 
-                }).subscribeOn(Schedulers.newThread()))
+                }).subscribeOn(Schedulers.io()))
                 //.onErrorReturn(throwable -> "ops")
                 .map(object -> (DrawObject)object)
-                ;
+                .doOnNext(drawObject -> System.out.println("[S_RECEIVED]"
+                                    + drawObject.toString() + " [THREAD]"
+                                    + Thread.currentThread().getName()
+                                    + System.lineSeparator()));
     }
     /*Observable<String> serverStream() {
         return Observable
@@ -91,9 +94,9 @@ public class Client {
             //System.out.println("[SENT]" + data.toString() + "[TO]" + socket.getRemoteSocketAddress());
             //System.out.println("[OWN]" + socket.getLocalSocketAddress());
             out.writeObject(data);
-            out.flush();
+            out.reset();
             System.out.println("[SENT]" + data.toString() + "[TO]" + socket.getRemoteSocketAddress());
-            System.out.println("[OWN]" + socket.getLocalSocketAddress());
+            //System.out.println("[OWN]" + socket.getLocalSocketAddress());
         } catch (IOException e) {
             System.err.println(e.toString());
         }

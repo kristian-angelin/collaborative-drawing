@@ -12,21 +12,20 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.scene.shape.Ellipse;
 import javafx.scene.shape.Line;
-import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.SocketException;
 
 public class CollaborativeDrawing extends Application {
-
+    private GraphicsContext context;
     private final ToggleGroup drawTools = new ToggleGroup(); //TODO: Should we use this here?
 
     // Shapes used for drawing
-    private final Rectangle rectangle = new Rectangle();
+    private final DrawRectangle rectangle = new DrawRectangle();
     private final Ellipse oval = new Ellipse();
     private final Line line = new Line();
 
@@ -51,7 +50,7 @@ public class CollaborativeDrawing extends Application {
 
         // Setup the paintable canvas
         Canvas canvas = new Canvas(650, 600);
-        GraphicsContext context;
+        //GraphicsContext context;
         context = canvas.getGraphicsContext2D();
 
         // Create buttons for draw shape selection
@@ -71,6 +70,7 @@ public class CollaborativeDrawing extends Application {
         drawTools.selectToggle(rectangleBtn);
 
         ColorPicker colorPicker = new ColorPicker(Color.BLACK); // Color picker with default color
+        updateShapeColors(colorPicker.getValue()); // Set default shape color
 
         // Slider for setting size of strokes
         Slider slider = new Slider(1, 40, 3);
@@ -125,13 +125,17 @@ public class CollaborativeDrawing extends Application {
 
         // Observable checking the color selection
         JavaFxObservable.actionEventsOf(colorPicker)
-                .subscribe(e -> context.setStroke(colorPicker.getValue()));
+                .subscribe(e -> {
+                    context.setStroke(colorPicker.getValue());
+                    updateShapeColors(colorPicker.getValue());
+                });
 
         // Observable checking the slider for stroke size selection
         JavaFxObservable.valuesOf(slider.valueProperty())
-                .subscribe(e -> {
-                    context.setLineWidth(slider.getValue());
-                    sliderLabel.setText("Stroke size: " + String.format("%.1f", slider.getValue())); // String.format() for showing only one decimal.
+                .subscribe(value -> {
+                    context.setLineWidth((Double) value);
+                    sliderLabel.setText("Stroke size: " + String.format("%.1f", value)); // String.format() for showing only one decimal.
+                    updateShapeStrokeWidth((Double) value);
                 });
 
         // Observable clearing canvas on clear canvas button press
@@ -141,15 +145,10 @@ public class CollaborativeDrawing extends Application {
         JavaFxObservable.actionEventsOf(connectBtn)
                 .subscribe(e -> clientConnect(networkText));
         JavaFxObservable.actionEventsOf(hostBtn)
-                .subscribe(e -> {
-                    startServer(networkText);
-                });
+                .subscribe(e -> startServer(networkText));
         JavaFxObservable.actionEventsOf(discBtn)
                 .subscribe(e -> disconnect()); //TODO: FIX addrow test
 
-
-        //JavaFxObservable.eventsOf(canvas, MouseEvent.MOUSE_PRESSED)
-                //.subscribe(mEvent -> startDraw());
 
         // TODO: CONTINUE NEW WAY OF HANDLING MOUSE EVENTS
         Observable<MouseEvent> click = JavaFxObservable.eventsOf(canvas, MouseEvent.MOUSE_PRESSED);
@@ -164,16 +163,16 @@ public class CollaborativeDrawing extends Application {
 
         Observable.merge(click, drag, release)
                 .filter(e -> freehandBtn.isSelected())
-                .subscribe(me -> drawFreehand(context, me));
+                .subscribe(me -> drawFreehand(me));
         Observable.merge(click, drag, release)
                 .filter(e -> rectangleBtn.isSelected())
-                .subscribe(me -> drawRectangle(context, me));
+                .subscribe(me -> drawRectangle(me));
         Observable.merge(click, drag, release)
                 .filter(e -> ovalBtn.isSelected())
-                .subscribe(me -> drawOval(context, me));
+                .subscribe(me -> drawOval(me));
         Observable.merge(click, drag, release)
                 .filter(e -> lineBtn.isSelected())
-                .subscribe(me -> drawLine(context, me));
+                .subscribe(me -> drawLine(me));
 
         /*Observable.merge(observable2, observable3) TODO: ONLY DOIN DRAWLINE
                 .subscribe(me -> drawLine(context, me));*/
@@ -264,7 +263,6 @@ public class CollaborativeDrawing extends Application {
     }
     // TODO: EXCEPTIONS!!!
     void startServer(TextArea networkText) { //TODO: Remove debug stuff!
-        //System.out.println("[EXECUTING] startServer()");
         try {
             if(server == null) {
                 //System.out.println("[EXECUTING] new Server()");
@@ -272,36 +270,15 @@ public class CollaborativeDrawing extends Application {
                 //server.startServer();
             }
             networkText.appendText("Server started!" + System.lineSeparator());
-            //System.out.println("Server connection: " + server.getServerSocket().getLocalSocketAddress());
 
-            // TODO: Refactor code to server and just call methods?
-            /*Observable<Socket> cnn = server.clientConnections();
-            cnn.subscribe(socket1 ->
-                    server.addToSocketList(socket1),
-                    Throwable::printStackTrace,
-                    () -> System.out.println("addToSocketList ended"));
-    */
-            /*cnn.map(Socket::getInputStream)
-                    .map(InputStreamReader::new)
-                    .map(BufferedReader::new)
-                    .map(BufferedReader::lines)
-                    .flatMap(stream -> Observable
-                           .fromIterable(stream::iterator).subscribeOn(Schedulers.io()))*/
             Observable<Socket> sock = server.getClientsVar();
-            //Observable<Socket> sck = server.getStream();
-            //sck.subscribe(socket1 -> System.out.println("Socket sent to server!"));
-            /*sock.compose(Server.getStream())
-                .subscribe(s -> { networkText.appendText("Data: " + s + System.lineSeparator() +
-                        Thread.currentThread().getName() + System.lineSeparator());
-                        System.out.println("Sent to server! Thread: " + Thread.currentThread().getName());
-                        },
-                        Throwable::printStackTrace,
-                        () -> System.out.println("getInputStream ended"));*/
-            serverDisposable = sock.compose(Server.getStream())
-                .subscribe(data -> {
-                            networkText.appendText("Data: " + data.toString() + System.lineSeparator() +
-                                                    Thread.currentThread().getName() + System.lineSeparator());
-                            server.sendToClients(data);
+
+            serverDisposable = sock.compose(Server.getStream()) // Compose to get ObservableTransformer
+                .subscribe(drawObject -> {
+                            networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
+                            System.out.println("[RECEIVED]" + drawObject.toString() + System.lineSeparator());
+                            server.sendToClients(drawObject);
+                            drawObject.toCanvas(context);
                         },
                         throwable -> {
                             networkText.appendText("Server shutdown!" + System.lineSeparator());
@@ -314,52 +291,6 @@ public class CollaborativeDrawing extends Application {
             networkText.appendText("Unable to start server!" + System.lineSeparator());
             System.err.println(e.toString());
         }
-        /*sock.compose(Server.getStream())
-                .subscribe(data -> {
-                            networkText.appendText("Data: " + data + System.lineSeparator() +
-                                    Thread.currentThread().getName() + System.lineSeparator());
-                            server.sendToClients(data);
-                        },
-                        Throwable::printStackTrace);*/
-        /*sock.compose(Server.getStream())
-            .subscribe(data -> {server.sendToClients(data);
-                                System.out.println("Sent to clients! Thread: " + Thread.currentThread().getName());});*/
-/*
-        cnn.subscribe(s -> System.out.println("Socket: " + s.toString() + " T: " + Thread.currentThread().getName()),
-                Throwable::printStackTrace,
-                () -> System.out.println("Test subscribe completed"));*/
-        //server.clientConnections()
-        //        .subscribe(s -> networkText.appendText("Data: " + s + System.lineSeparator()));
-        /*server.clientConnected()
-                .subscribe(socket -> networkText.appendText("Client connected from: "
-                                                                + socket.getRemoteSocketAddress()
-                                                                + System.lineSeparator()));*/
-                /*server.clientConnected()
-                .doOnComplete(() -> System.out.println("COMPLETE!"))
-                //.map(o -> (DrawObject)o)
-                .subscribe(stream -> {
-                    DrawObject draw = (DrawObject) stream.readObject();
-                            networkText.appendText("Data: "
-                                    + draw.getX() + ", " + draw.getY()
-                                    + System.lineSeparator());
-                        });*/
-        //TODO: Fingers crossed this is it!
-        /*server.clientConnected()
-                .doOnComplete(() -> System.out.println("COMPLETE!"))
-                .map(o -> (DrawObject)o)
-                .subscribe(object -> {
-                            networkText.appendText("Data: "
-                                    + object.getX() + ", " + object.getY()
-                                    + System.lineSeparator());
-                        });*/
-        /*server.drawHistory()
-                .subscribe(s -> networkText.appendText(s + System.lineSeparator()),
-                        s -> networkText.appendText("Error!" + System.lineSeparator()),
-                        () -> networkText.appendText("Completed list!" + System.lineSeparator()));*/
-        /*JavaFxObservable.actionEventsOf(test)
-                .subscribe(s -> networkText.appendText("Change: " + s.toString() + System.lineSeparator()));*/
-        /*Observable.(drawTools)
-                .subscribe(s -> networkText.appendText("Tap!" + System.lineSeparator()));*/
     }
 
     void clientConnect(TextArea networkText) {
@@ -375,17 +306,17 @@ public class CollaborativeDrawing extends Application {
             Observable<DrawObject> obs = client.serverStream();
             //Observable<String> obs = client.serverStream();
 
-            clientDisposable = obs.subscribe(data -> {
-                    networkText.appendText("Data: " + data.toString() + System.lineSeparator() +
-                                            Thread.currentThread().getName() + System.lineSeparator());
-                    System.out.println("[RECEIVED]" + data.toString() + System.lineSeparator());
+            clientDisposable = obs.subscribe(drawObject -> {
+                    networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
+                    System.out.println("[RECEIVED]" + drawObject.toString() + System.lineSeparator());
+                    drawObject.toCanvas(context);
                 },
                     throwable -> {
                     networkText.appendText("Disconnected from server!" + System.lineSeparator());
                     System.out.println("Connection to server lost: " + throwable.toString());
                 });
             //client.sendToServer(new DrawObject(1.0, 1.0).toStreamString());
-            client.sendToServer(new DrawObject(1.0, 1.0));
+            //client.sendToServer(new DrawObject(1.0, 1.0));
             //client.sendToServer(new DrawObject(2.0, 2.0));
             //out.reset();
             //out.flush();
@@ -424,7 +355,7 @@ public class CollaborativeDrawing extends Application {
 
     }
 
-    void drawFreehand(GraphicsContext context, MouseEvent me) throws IOException {
+    void drawFreehand(MouseEvent me) throws IOException {
         if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
             context.beginPath();
             context.lineTo(me.getX(), me.getY());
@@ -437,7 +368,7 @@ public class CollaborativeDrawing extends Application {
             context.closePath();
         }
     }
-    void drawRectangle(GraphicsContext context, MouseEvent me) throws IOException {
+    void drawRectangle(MouseEvent me) {
         if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
             rectangle.setX(me.getX());
             rectangle.setY(me.getY());
@@ -454,21 +385,19 @@ public class CollaborativeDrawing extends Application {
             if(rectangle.getY() > me.getY()) {
                 rectangle.setY(me.getY());
             }
-            context.strokeRect(rectangle.getX(), rectangle.getY(),
-                                rectangle.getWidth(), rectangle.getHeight());
-            if(client != null) { // TODO: TEST SENDING OUTPUT FROM CLIENT!
-                //client.sendToServer(new DrawObject(10,10).toStreamString());
-                client.sendToServer(new DrawObject(10,10));
-                //out.flush();
-                System.out.println("Client: DATA SENT!");
+            rectangle.toCanvas(context);
+            if(client != null) {
+                client.sendToServer(rectangle);
+                //System.out.println("[SEND] " + rectangle.toString());
             }
             if(server != null) {
-                server.sendToClients(new DrawObject(5,5));
+                server.sendToClients(rectangle);
                 System.out.println("Sockets list size: " + server.getSocketListSize());
+                //System.out.println("[SEND] " + rectangle.toString());
             }
         }
     }
-    void drawOval(GraphicsContext context, MouseEvent me) {
+    void drawOval(MouseEvent me) {
         if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
             oval.setCenterX(me.getX());
             oval.setCenterY(me.getY());
@@ -488,7 +417,7 @@ public class CollaborativeDrawing extends Application {
 
         }
     }
-    void drawLine(GraphicsContext context, MouseEvent me) {
+    void drawLine(MouseEvent me) {
         if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
             line.setStartX(me.getX());
             line.setStartY(me.getY());
@@ -497,5 +426,12 @@ public class CollaborativeDrawing extends Application {
             line.setEndY(me.getY());
             context.strokeLine(line.getStartX(), line.getStartY(), line.getEndX(), line.getEndY());
         }
+    }
+
+    void updateShapeColors(Paint color) {
+        rectangle.setColor(color);
+    }
+    void updateShapeStrokeWidth(double width) {
+        rectangle.setStrokeWidth(width);
     }
 }
