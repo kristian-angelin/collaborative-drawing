@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CollaborativeDrawing extends Application {
+    private Canvas canvas;
     private GraphicsContext context;
     private final ToggleGroup drawTools = new ToggleGroup(); //TODO: Should we use this here?
 
@@ -29,6 +30,7 @@ public class CollaborativeDrawing extends Application {
     private final DrawOval oval = new DrawOval();
     private final DrawLine line = new DrawLine();
     private final DrawFreeHand freeHand = new DrawFreeHand();
+    private DrawCleanCanvas cleanCanvas;
     // Store draw points for freehand drawing
     private final ArrayList<Double> xPoints = new ArrayList<>();
     private final ArrayList<Double> yPoints = new ArrayList<>();
@@ -53,7 +55,8 @@ public class CollaborativeDrawing extends Application {
     public void start(Stage primaryStage) {
 
         // Setup the paintable canvas
-        Canvas canvas = new Canvas(650, 600);
+        canvas = new Canvas(650, 600);
+        cleanCanvas = new DrawCleanCanvas(canvas.getWidth(), canvas.getHeight());
         //GraphicsContext context;
         context = canvas.getGraphicsContext2D();
 
@@ -144,7 +147,10 @@ public class CollaborativeDrawing extends Application {
 
         // Observable clearing canvas on clear canvas button press
         JavaFxObservable.actionEventsOf(clearCanvasBtn)
-                .subscribe(e -> context.clearRect(0,0, canvas.getWidth(),canvas.getHeight()));
+                .subscribe(e -> {
+                    context.clearRect(0,0, canvas.getWidth(),canvas.getHeight());
+                    sendDrawObject(cleanCanvas);
+                });
 
         JavaFxObservable.actionEventsOf(connectBtn)
                 .subscribe(e -> clientConnect(networkText));
