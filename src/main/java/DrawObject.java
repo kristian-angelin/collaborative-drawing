@@ -20,6 +20,14 @@ public abstract class DrawObject implements Serializable {
         this.y = y;
     }
 
+    // Copy constructor
+    DrawObject(DrawObject drawObject){
+        this.x = drawObject.x;
+        this.y = drawObject.y;
+        lineWidth = drawObject.lineWidth;
+        lineColor = drawObject.lineColor;
+    }
+
 
     protected double getX() {
         return x;

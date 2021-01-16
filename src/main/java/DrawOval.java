@@ -8,6 +8,13 @@ public class DrawOval extends DrawObject {
 
     DrawOval() {}
 
+    // Copy constructor
+    DrawOval(DrawOval drawOval) {
+        super(drawOval);
+        this.radiusX = drawOval.radiusX;
+        this.radiusY = drawOval.radiusY;
+    }
+
     public void setRadiusX(double radiusX) {
         this.radiusX = radiusX;
     }

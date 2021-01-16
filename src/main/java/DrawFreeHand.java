@@ -1,5 +1,6 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.scene.shape.Polyline;
 
 import java.util.ArrayList;
@@ -11,6 +12,10 @@ public class DrawFreeHand extends DrawObject {
     private int nPoints = 0;
 
     DrawFreeHand() {}
+    DrawFreeHand(ArrayList<Double> xPoints, ArrayList<Double> yPoints, Paint color) {
+        addPoints(xPoints, yPoints);
+        setColor(color);
+    }
 
     public void addPoints(ArrayList<Double> xPoints, ArrayList<Double> yPoints) {
         this.xPoints = new double[xPoints.size()];

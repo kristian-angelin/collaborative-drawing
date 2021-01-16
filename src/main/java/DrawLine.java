@@ -8,6 +8,12 @@ public class DrawLine extends DrawObject {
 
     DrawLine(){}
 
+    // Copy constructor
+    DrawLine(DrawLine drawLine) {
+        super(drawLine);
+        this.endX = drawLine.endX;
+        this.endY = drawLine.endY;
+    }
     public void setEndX(double endX) {
         this.endX = endX;
     }

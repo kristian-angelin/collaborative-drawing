@@ -13,6 +13,13 @@ public class DrawRectangle extends DrawObject {
         this.height = height;
     }
 
+    // Copy constructor
+    DrawRectangle(DrawRectangle drawRectangle) {
+        super(drawRectangle);
+        this.height = drawRectangle.height;
+        this.width = drawRectangle.width;
+    }
+
     public void setHeight(double height) {
         this.height = height;
     }

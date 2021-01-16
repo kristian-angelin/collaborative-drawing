@@ -23,14 +23,11 @@ public class Client {
         //out = new OutputStreamWriter(socket.getOutputStream());
     }
 
-    /*void start() throws IOException {
-        //socket = new Socket(address, port);
-        //out = new DataOutputStream(socket.getOutputStream());
-    }*/
 
     void disconnect(){
         try {
             socket.close();
+            out.close();
         } catch (IOException e) {
             System.err.println(e.toString());
         }
@@ -39,6 +36,7 @@ public class Client {
     Observable<DrawObject> serverStream() {
         return Observable
                 .<Socket>just(socket)
+                .subscribeOn(Schedulers.io())
                 .map(Socket::getInputStream)
                 .map(ObjectInputStream::new)
                 .flatMap(or -> Observable.create(e -> {
@@ -50,6 +48,9 @@ public class Client {
                         if(!e.isDisposed()) {
                             e.onError(ex);
                         }
+                        else {
+                            System.err.println("stream error: " + ex);
+                        }
                     }
 
                 }).subscribeOn(Schedulers.io()))
@@ -60,50 +61,17 @@ public class Client {
                                     + Thread.currentThread().getName()
                                     + System.lineSeparator()));
     }
-    /*Observable<String> serverStream() {
-        return Observable
-                .<Socket>just(socket)
-                //.subscribeOn(Schedulers.io())
-                .map(Socket::getInputStream)
-                .map(InputStreamReader::new)
-                .map(BufferedReader::new)
-                .map(BufferedReader::lines)
-                .flatMap(stream -> Observable
-                        .fromIterable(stream::iterator).subscribeOn(Schedulers.newThread()))
-                .publish().autoConnect()
 
-                ;
-    }*/
-    /*Observable<String> serverStream() {
-        return Observable
-                .<Socket>just(socket)
-                //.subscribeOn(Schedulers.io())
-                .map(Socket::getInputStream)
-                .map(InputStreamReader::new)
-                .map(BufferedReader::new)
-                .map(BufferedReader::lines)
-                .flatMap(stream -> Observable
-                        .fromIterable(stream::iterator).subscribeOn(Schedulers.newThread()))
-                .publish().autoConnect()
-
-                ;
-    }*/
-
-    void sendToServer(DrawObject data) {
+    void sendToServer(DrawObject drawObject) {
         try {
-            //System.out.println("[SENT]" + data.toString() + "[TO]" + socket.getRemoteSocketAddress());
+            //System.out.println("[SENT]" + drawObject.toString() + "[TO]" + socket.getRemoteSocketAddress());
             //System.out.println("[OWN]" + socket.getLocalSocketAddress());
-            out.writeObject(data);
+            out.writeObject(drawObject);
             out.reset();
-            System.out.println("[SENT]" + data.toString() + "[TO]" + socket.getRemoteSocketAddress());
+            System.out.println("[SENT]" + drawObject.toString() + "[TO]" + socket.getRemoteSocketAddress());
             //System.out.println("[OWN]" + socket.getLocalSocketAddress());
         } catch (IOException e) {
             System.err.println(e.toString());
         }
     }
-    /*void sendToServer(DrawObject obj) throws IOException {
-        System.out.println("Sending object!");
-        out.writeObject(obj);
-        //out.flush();
-    }*/
 }

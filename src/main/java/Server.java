@@ -1,21 +1,19 @@
 import io.reactivex.Observable;
 import io.reactivex.ObservableTransformer;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.internal.operators.observable.ObservableEmpty;
 import io.reactivex.schedulers.Schedulers;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Stream;
 
 public class Server {
 
     private Observable<Socket> clients;
     private final ServerSocket serverSocket;
+    Observable<DrawObject> drawObjectStream;
     //private DataOutputStream out;
     //private OutputStreamWriter out;
     //private List<String> listString;
@@ -24,28 +22,49 @@ public class Server {
     //private final List<Socket> clientList;
     //private final ConcurrentHashMap<Socket, OutputStreamWriter> list;
     private final ConcurrentHashMap<Socket, ObjectOutputStream> list;
-    private Disposable disp;
+    private Disposable clientDisposable;
+    private ArrayList<DrawObject> objectsCache;
 
     Server(int port) throws IOException {
-        //System.out.println("[EXECUTING] new serverSocket()");
         serverSocket = new ServerSocket(port);
         list = new ConcurrentHashMap<>();
-        //System.out.println("[EXECUTING] server.startServer()");
+        objectsCache = new ArrayList<>();
         startServer();
     }
 
     void startServer() {
-        //System.out.println("[EXECUTING] clientConnections()");
         clients = clientConnections();
-        //(System.out.println("[EXECUTING] clients.subscribe()");
-        disp = clients.subscribe(this::addToSocketList,
-                throwable -> System.out.println("Server shutdown: " + throwable.toString()));
-        //System.out.println("Server local address: " + serverSocket.getLocalSocketAddress());
-        //System.out.println("Server inet address: " + serverSocket.getInetAddress());
+        drawObjectStream = clients.compose(getStream()).share();
+        clientDisposable = clients.subscribe(socket -> {
+                list.put(socket,new ObjectOutputStream(socket.getOutputStream()));
+                sendDrawHistory(socket);
+            },
+            throwable -> System.out.println("Server shutdown: " + throwable.toString()));
+        /*clients.compose(getStream()).subscribe(drawObject -> System.out.println("[COLLADRAW RECEIVED]" + drawObject.toString() + System.lineSeparator()),
+                throwable -> System.out.println("Server shutdown: " + throwable.toString()));*/
+        getObjectStream().subscribe(drawObject -> {
+            sendToClients(drawObject);
+            objectsCache.add(drawObject);
+            System.out.println("[COLLADRAW RECEIVED]" + drawObject.toString() + System.lineSeparator());
+        },
+            throwable -> System.out.println("Server shutdown: " + throwable.toString()));
+    }
+
+    void sendDrawHistory(Socket socket) {
+        for(DrawObject obj : objectsCache) {
+            try {
+                list.get(socket).writeObject(obj);
+                list.get(socket).reset();
+                System.out.println("[SENT]" + obj.toString() + System.lineSeparator());
+            } catch (IOException e) {
+                //statusText.appendText("Client disconnected!" + System.lineSeparator());
+                list.remove(socket);
+            }
+        }
     }
 
     // Observable for accepting connections
-    Observable<Socket> clientConnections() {
+    Observable<Socket> clientConnections() { //TODO should be private
         return Observable
                 .<Socket>create(e -> {
                     try{
@@ -64,9 +83,12 @@ public class Server {
                 .share();
     }
 
+    Observable<DrawObject> getObjectStream() {
+        return drawObjectStream;
+    }
 
     //public static ObservableTransformer<Socket, String> getStream() {
-    public static ObservableTransformer<Socket, DrawObject> getStream() {
+    public static ObservableTransformer<Socket, DrawObject> getStream() { // TODO: Test removing share() when all works
         return up -> up
                 .map(Socket::getInputStream)
                 .map(ObjectInputStream::new)
@@ -82,6 +104,12 @@ public class Server {
                             //e.onError(ex);
                             System.err.println("Socket closed: " + ex);
                         }
+                    } catch (Exception ex) {
+                        //if (!emission.isDisposed()) {
+                            System.err.println("[EXCEPTION] stream.readObject: " + ex.toString());
+                            //stream.close();
+                            emission.onError(ex);
+                        //}
                     }
                 }).subscribeOn(Schedulers.io()))
                 .map(object -> (DrawObject)object)
@@ -89,12 +117,11 @@ public class Server {
                         + drawObject.toString() + " [THREAD]"
                         + Thread.currentThread().getName()
                         + System.lineSeparator()));
-
     }
 
     void shutDown() {
         online = false;
-        disp.dispose();
+        clientDisposable.dispose();
         try {
             serverSocket.close();
         } catch (IOException e) {
@@ -115,6 +142,7 @@ public class Server {
 
     void sendToClients(DrawObject drawObject) { // TODO: Not entirely sure this works 100% is get(sock) ok? use index instead?
         //System.out.println("Sent to clients! Thread: " + Thread.currentThread().getName());
+        objectsCache.add(drawObject);
         System.out.println("[SEND]" + drawObject.toString() + System.lineSeparator());
         for(Socket sock: list.keySet()) {
             try {

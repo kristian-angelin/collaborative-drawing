@@ -1,4 +1,5 @@
 import io.reactivex.Observable;
+import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.rxjavafx.observables.JavaFxObservable;
 import javafx.application.Application;
@@ -29,7 +30,7 @@ public class CollaborativeDrawing extends Application {
     private final DrawRectangle rectangle = new DrawRectangle();
     private final DrawOval oval = new DrawOval();
     private final DrawLine line = new DrawLine();
-    private final DrawFreeHand freeHand = new DrawFreeHand();
+    //private final DrawFreeHand freeHand = new DrawFreeHand();
     private DrawCleanCanvas cleanCanvas;
     // Store draw points for freehand drawing
     private final ArrayList<Double> xPoints = new ArrayList<>();
@@ -38,8 +39,11 @@ public class CollaborativeDrawing extends Application {
     //TODO: REMOVE DEBUG
     private Server server;
     private Client client;
+    boolean isClient = false;
+    boolean isServer = false;
     private Disposable serverDisposable;
     private Disposable clientDisposable;
+    private CompositeDisposable compositeDisposable;
     private Socket socket;
     private DataOutputStream out;
 
@@ -47,13 +51,15 @@ public class CollaborativeDrawing extends Application {
     private final Button hostBtn = new Button("Host");
     private final Button discBtn = new Button("Disconnect");
 
+
+
     public static void main(String[] args) {
         launch(args);
     }
 
     @Override
     public void start(Stage primaryStage) {
-
+        compositeDisposable = new CompositeDisposable();
         // Setup the paintable canvas
         canvas = new Canvas(650, 600);
         cleanCanvas = new DrawCleanCanvas(canvas.getWidth(), canvas.getHeight());
@@ -183,26 +189,38 @@ public class CollaborativeDrawing extends Application {
     // TODO: EXCEPTIONS!!!
     void startServer(TextArea networkText) { //TODO: Remove debug stuff!
         try {
-            if(server == null) {
-                //System.out.println("[EXECUTING] new Server()");
-                server = new Server(12345);
-                //server.startServer();
-            }
+
+            //System.out.println("[EXECUTING] new Server()");
+            server = new Server(12345);
+            isServer = true;
+            //server.startServer();
+
             networkText.appendText("Server started!" + System.lineSeparator());
 
-            Observable<Socket> sock = server.getClientsVar();
+            //Observable<Socket> sock = server.getClientsVar();
 
-            serverDisposable = sock.compose(Server.getStream()) // Compose to get ObservableTransformer
+            /*serverDisposable = server.getObjectStream() // Compose to get ObservableTransformer
                 .subscribe(drawObject -> {
-                            networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
-                            System.out.println("[RECEIVED]" + drawObject.toString() + System.lineSeparator());
-                            server.sendToClients(drawObject);
-                            drawObject.toCanvas(context);
-                        },
-                        throwable -> {
-                            networkText.appendText("Server shutdown!" + System.lineSeparator());
-                            System.out.println("Server shutdown: " + throwable.toString());
-                        });
+                    networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
+                    System.out.println("[COLLADRAW RECEIVED]" + drawObject.toString() + System.lineSeparator());
+                    //server.sendToClients(drawObject);
+                    drawObject.toCanvas(context);
+                },
+                throwable -> {
+                    networkText.appendText("Server shutdown!" + System.lineSeparator());
+                    System.out.println("Server shutdown: " + throwable.toString());
+                });*/
+            compositeDisposable.add(server.getObjectStream() // Compose to get ObservableTransformer
+                    .subscribe(drawObject -> {
+                                networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
+                                System.out.println("[COLLADRAW RECEIVED]" + drawObject.toString() + System.lineSeparator());
+                                //server.sendToClients(drawObject);
+                                drawObject.toCanvas(context);
+                            },
+                            throwable -> {
+                                networkText.appendText("Server shutdown!" + System.lineSeparator());
+                                System.out.println("Server shutdown: " + throwable.toString());
+                            }));
             discBtn.setDisable(false);
             connectBtn.setDisable(true);
             hostBtn.setDisable(true);
@@ -215,17 +233,22 @@ public class CollaborativeDrawing extends Application {
     void clientConnect(TextArea networkText) {
         // Connect to server
         try {
+            //client = new Client("localhost", 12345);
             client = new Client("localhost", 12345);
             networkText.appendText("Connected to server!" + System.lineSeparator());
+            isClient = true;
             //out = new DataOutputStream(socket.getOutputStream());
             //String test = "Test\n";
             //out.writeUTF(new DrawObject(2.1, 4.4).toStreamableString());
             //client.sendToServer(new DrawObject(2.1, 4.4).toStreamableString());
             //client.sendToServer(new DrawObject(2.1, 4.4).toStreamableString());
-            Observable<DrawObject> obs = client.serverStream();
+
+            //Observable<DrawObject> obs = client.serverStream();
+
             //Observable<String> obs = client.serverStream();
 
-            clientDisposable = obs.subscribe(drawObject -> {
+            //clientDisposable = obs.subscribe(drawObject -> {
+            compositeDisposable.add(client.serverStream().subscribe(drawObject -> {
                     networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
                     System.out.println("[RECEIVED]" + drawObject.toString() + System.lineSeparator());
                     drawObject.toCanvas(context);
@@ -233,7 +256,7 @@ public class CollaborativeDrawing extends Application {
                     throwable -> {
                     networkText.appendText("Disconnected from server!" + System.lineSeparator());
                     System.out.println("Connection to server lost: " + throwable.toString());
-                });
+                }));
             //client.sendToServer(new DrawObject(1.0, 1.0).toStreamString());
             //client.sendToServer(new DrawObject(1.0, 1.0));
             //client.sendToServer(new DrawObject(2.0, 2.0));
@@ -256,18 +279,21 @@ public class CollaborativeDrawing extends Application {
     }
 
     void disconnect() {
-        if(client != null) {
-            clientDisposable.dispose();
+        if(isClient) {
+            //clientDisposable.dispose();
             client.disconnect();
-            client = null;
+            //client = null;
+            isClient = false;
             //clientDisposable.dispose();
         }
-        if(server != null) {
-            serverDisposable.dispose();
+        if(isServer) {
+            //serverDisposable.dispose();
             server.shutDown();
-            server = null;
+            isServer = false;
+            //server = null;
             //serverDisposable.dispose();
         }
+        compositeDisposable.clear();
         discBtn.setDisable(true);
         connectBtn.setDisable(false);
         hostBtn.setDisable(false);
@@ -297,10 +323,9 @@ public class CollaborativeDrawing extends Application {
             context.lineTo(me.getX(), me.getY());
             context.stroke();
             context.closePath();
-            freeHand.addPoints(xPoints, yPoints);
-            sendDrawObject(freeHand);
-        }
 
+            sendDrawObject(new DrawFreeHand(xPoints, yPoints, context.getStroke()));
+        }
     }
 
     void drawRectangle(MouseEvent me) {
@@ -321,7 +346,7 @@ public class CollaborativeDrawing extends Application {
                 rectangle.setY(me.getY());
             }
             rectangle.toCanvas(context);
-            sendDrawObject(rectangle);
+            sendDrawObject(new DrawRectangle(rectangle));
         }
     }
     void drawOval(MouseEvent me) {
@@ -342,7 +367,7 @@ public class CollaborativeDrawing extends Application {
             }
 
             oval.toCanvas(context);
-            sendDrawObject(oval);
+            sendDrawObject(new DrawOval(oval));
         }
     }
 
@@ -355,13 +380,13 @@ public class CollaborativeDrawing extends Application {
             line.setEndY(me.getY());
             // Draw line and send object
             line.toCanvas(context);
-            sendDrawObject(line);
+            sendDrawObject(new DrawLine(line));
         }
     }
 
     // Sends object to server or clients
     void sendDrawObject(DrawObject drawObject) {
-        if(client != null) {
+        if(isClient) {
             client.sendToServer(drawObject);
             //System.out.println("[SEND] " + rectangle.toString());
         }
@@ -376,12 +401,12 @@ public class CollaborativeDrawing extends Application {
         rectangle.setColor(color);
         oval.setColor(color);
         line.setColor(color);
-        freeHand.setColor(color);
+        //freeHand.setColor(color);
     }
     void updateShapeStrokeWidth(double width) {
         rectangle.setStrokeWidth(width);
         oval.setStrokeWidth(width);
         line.setStrokeWidth(width);
-        freeHand.setStrokeWidth(width);
+        //freeHand.setStrokeWidth(width);
     }
 }
