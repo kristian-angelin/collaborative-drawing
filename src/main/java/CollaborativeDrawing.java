@@ -18,6 +18,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 import javafx.util.Pair;
 
 import java.io.*;
@@ -57,6 +58,8 @@ public class CollaborativeDrawing extends Application {
 
     private String port;
     private String ip;
+    private static final int MIN_PORT_RANGE = 257;
+    private static final int MAX_PORT_RANGE = 65535;
 
     public static void main(String[] args) {
         launch(args);
@@ -195,13 +198,17 @@ public class CollaborativeDrawing extends Application {
     int startServerDialog() {
         Dialog<Integer> dialog = new Dialog<>();
         dialog.setTitle("Create server");
-        dialog.setHeaderText("Enter port number!");
+        dialog.setHeaderText("Enter port number! (" + MIN_PORT_RANGE + "-" + MAX_PORT_RANGE + ")");
 
-// Set the button types.
+        // Set the button types.
         ButtonType createServerButton = new ButtonType("Create", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(createServerButton, ButtonType.CANCEL);
 
-// Create the username and password labels and fields.
+        // Disable button
+        Button createButton = (Button) dialog.getDialogPane().lookupButton(createServerButton);
+        createButton.setDisable(true);
+
+        // Create field and label.
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
@@ -212,8 +219,24 @@ public class CollaborativeDrawing extends Application {
         grid.add(new Label("Port:"), 0, 1);
         grid.add(port, 1, 1);
         dialog.getDialogPane().setContent(grid);
+
+        port.textProperty().addListener((observable, oldValue, newValue) -> {
+            createButton.setDisable(Integer.parseInt(newValue) < MIN_PORT_RANGE || Integer.parseInt(newValue) > MAX_PORT_RANGE);
+        });
+
+        // Convert result
+        dialog.setResultConverter(buttonType -> {
+            if (buttonType == createServerButton) {
+                if(port.getText() != null) {
+                    return Integer.valueOf(port.getText());
+                }
+                //return Integer.valueOf(port.getText());
+            }
+            return 0; // Return 0 if cancel is pressed
+        });
+
+        // Wait for button press to get result
         dialog.showAndWait();
-        //return (Integer.parseInt(port.getText()));
         return dialog.getResult();
     }
 
@@ -247,35 +270,38 @@ public class CollaborativeDrawing extends Application {
     // TODO: EXCEPTIONS!!!
     void startServer(TextArea networkText) { //TODO: Remove debug stuff!
         int port = startServerDialog();
-        //System.out.println("Port: " + port);
-        try {
+        if(port != 0) {
 
-            //System.out.println("[EXECUTING] new Server()");
-            server = new Server(port);
-            isServer = true;
-            //server.startServer();
+            //System.out.println("Port: " + port);
+            try {
 
-            networkText.appendText("Server started on port: " + port + System.lineSeparator());
+                //System.out.println("[EXECUTING] new Server()");
+                server = new Server(port);
+                isServer = true;
+                //server.startServer();
 
-            compositeDisposable.add(server.getObjectStream() // Compose to get ObservableTransformer
-                    .subscribe(drawObject -> {
-                                //networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
-                                System.out.println("[COLLADRAW RECEIVED]" + drawObject.toString() + System.lineSeparator());
-                                //server.sendToClients(drawObject);
-                                drawObject.toCanvas(context);
-                            },
-                            throwable -> {
-                                // runLater() on JavaFX thread
-                                Platform.runLater(() -> networkText.appendText("Server shutdown!" + System.lineSeparator()));
-                                //networkText.appendText("Server shutdown!" + System.lineSeparator());
-                                System.out.println("Server shutdown: " + throwable.toString());
-                            }));
-            discBtn.setDisable(false);
-            connectBtn.setDisable(true);
-            hostBtn.setDisable(true);
-        } catch (IOException e) {
-            networkText.appendText("Unable to start server!" + System.lineSeparator());
-            System.err.println(e.toString());
+                networkText.appendText("Server started on port: " + port + System.lineSeparator());
+
+                compositeDisposable.add(server.getObjectStream() // Compose to get ObservableTransformer
+                        .subscribe(drawObject -> {
+                                    //networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
+                                    System.out.println("[COLLADRAW RECEIVED]" + drawObject.toString() + System.lineSeparator());
+                                    //server.sendToClients(drawObject);
+                                    drawObject.toCanvas(context);
+                                },
+                                throwable -> {
+                                    // runLater() on JavaFX thread
+                                    Platform.runLater(() -> networkText.appendText("Server shutdown!" + System.lineSeparator()));
+                                    //networkText.appendText("Server shutdown!" + System.lineSeparator());
+                                    System.out.println("Server shutdown: " + throwable.toString());
+                                }));
+                discBtn.setDisable(false);
+                connectBtn.setDisable(true);
+                hostBtn.setDisable(true);
+            } catch (IOException e) {
+                networkText.appendText("Unable to start server!" + System.lineSeparator());
+                System.err.println(e.toString());
+            }
         }
     }
 
