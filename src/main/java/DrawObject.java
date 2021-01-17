@@ -4,8 +4,15 @@ import javafx.scene.paint.Paint;
 
 import java.io.Serializable;
 
+/**
+ * Abstract class for drawing objects on a canvas.
+ *
+ * @author  Kristian Angelin
+ * @version 1.0
+ * @since   2021-01-17
+ */
+
 public abstract class DrawObject implements Serializable {
-//public class DrawObject implements Serializable{
 
     private double x;
     private double y;
@@ -27,7 +34,6 @@ public abstract class DrawObject implements Serializable {
         lineWidth = drawObject.lineWidth;
         lineColor = drawObject.lineColor;
     }
-
 
     protected double getX() {
         return x;
@@ -55,6 +61,7 @@ public abstract class DrawObject implements Serializable {
         lineColor = color.toString();
     }
 
+    // Abstract method to draw object on canvas
     public abstract void toCanvas(GraphicsContext context);
 
     @Override

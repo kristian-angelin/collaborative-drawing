@@ -1,6 +1,14 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
+/**
+ * Concrete drawObject class for drawing rectangles on a canvas.
+ *
+ * @author  Kristian Angelin
+ * @version 1.0
+ * @since   2021-01-17
+ */
+
 public class DrawRectangle extends DrawObject {
     private double height;
     private double width;
@@ -29,18 +37,16 @@ public class DrawRectangle extends DrawObject {
 
     @Override
     public void toCanvas(GraphicsContext context) {
-        System.out.println("[TO CANVAS] Starting drawing");
-        //System.out.println("[START] " + toString());
+        // Save current color/stroke width
         Color tempColor = (Color) context.getStroke();
         double tempLineWidth = context.getLineWidth();
+        // Set properties and paint oval
         context.setLineWidth(getStrokeWidth());
         context.setStroke(getLineColor());
-        //System.out.println("[STROKE] " + toString());
         context.strokeRect(getX(), getY(), width, height);
+        // Restore color/stroke width
         context.setLineWidth(tempLineWidth);
         context.setStroke(tempColor);
-        //System.out.println("[END] " + toString());
-        System.out.println("[TO CANVAS] Done drawing");
     }
 
     @Override

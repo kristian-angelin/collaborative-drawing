@@ -1,5 +1,13 @@
 import javafx.scene.canvas.GraphicsContext;
 
+/**
+ * Concrete class for clearing a canvas.
+ *
+ * @author  Kristian Angelin
+ * @version 1.0
+ * @since   2021-01-17
+ */
+
 public class DrawCleanCanvas extends DrawObject{
     private final double canvasWidth;
     private final double canvasHeight;

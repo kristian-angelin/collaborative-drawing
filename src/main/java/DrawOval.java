@@ -1,6 +1,14 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
+/**
+ * Concrete drawObject class for drawing ovals on a canvas.
+ *
+ * @author  Kristian Angelin
+ * @version 1.0
+ * @since   2021-01-17
+ */
+
 public class DrawOval extends DrawObject {
 
     private double radiusX;

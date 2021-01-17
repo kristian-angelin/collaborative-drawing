@@ -1,30 +1,29 @@
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
-
 import java.io.*;
 import java.net.Socket;
-import java.net.SocketException;
 
-// TODO: Figure out where exception handling should go.
+/**
+ * Class for handling client connection to the server. Reads the
+ * stream of drawObjects.
+ *
+ * @author  Kristian Angelin
+ * @version 1.0
+ * @since   2021-01-17
+ */
 
 public class Client {
 
     private final Socket socket;
-    //private DataOutputStream out;
     private final ObjectOutputStream out;
-    //private OutputStreamWriter out;
 
     Client(String address, int port) throws IOException {
-        //this.address = address;
-        //this.port = port;
         socket = new Socket(address, port);
-        //out = new DataOutputStream(socket.getOutputStream());
         out = new ObjectOutputStream(socket.getOutputStream());
-        //out = new OutputStreamWriter(socket.getOutputStream());
     }
 
-
-    void disconnect(){
+    // Disconnects client
+    public void disconnect(){
         try {
             socket.close();
             out.close();
@@ -33,7 +32,8 @@ public class Client {
         }
     }
 
-    Observable<DrawObject> serverStream() {
+    // Returns the server stream of objects
+    public Observable<DrawObject> serverStream() {
         return Observable
                 .<Socket>just(socket)
                 .subscribeOn(Schedulers.io())
@@ -42,10 +42,7 @@ public class Client {
                 .flatMap(or -> Observable.create(e -> {
                     try {
                         while(true){
-
-                            System.out.println("[STREAM] About to read!");
                             e.onNext(or.readObject());
-                            System.out.println("[STREAM] Read complete!");
                         }
                     } catch (Exception ex) {
                         if(!e.isDisposed()) {
@@ -55,26 +52,23 @@ public class Client {
                             System.err.println("stream error: " + ex);
                         }
                     }
-
                 }).subscribeOn(Schedulers.io()))
-                //.onErrorReturn(throwable -> "ops")
-                .map(object -> (DrawObject)object)
-                .doOnNext(drawObject -> System.out.println("[S_RECEIVED]"
-                                    + drawObject.toString() + " [THREAD]"
-                                    + Thread.currentThread().getName()
-                                    + System.lineSeparator()));
+                .map(object -> (DrawObject)object);
     }
 
-    void sendToServer(DrawObject drawObject) {
+    // Send object to server
+    public void sendToServer(DrawObject drawObject) {
         try {
-            //System.out.println("[SENT]" + drawObject.toString() + "[TO]" + socket.getRemoteSocketAddress());
-            //System.out.println("[OWN]" + socket.getLocalSocketAddress());
             out.writeObject(drawObject);
             out.reset();
-            System.out.println("[SENT]" + drawObject.toString() + "[TO]" + socket.getRemoteSocketAddress());
-            //System.out.println("[OWN]" + socket.getLocalSocketAddress());
         } catch (IOException e) {
             System.err.println(e.toString());
         }
+    }
+
+    // Returns the connected server address as a string
+    public String getServerAddress() {
+        String ipAddress = socket.getInetAddress().toString();
+        return ipAddress.substring(ipAddress.indexOf("/") + 1);
     }
 }
