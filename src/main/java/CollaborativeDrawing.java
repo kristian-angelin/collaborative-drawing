@@ -21,6 +21,7 @@ import javafx.util.Callback;
 import javafx.util.Pair;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 
@@ -307,7 +308,7 @@ public class CollaborativeDrawing extends Application {
                 isServer = true;
                 //server.startServer();
 
-                networkText.appendText("Server started on port: " + port + System.lineSeparator());
+                networkText.appendText("Server started on " + InetAddress.getLocalHost().getHostAddress() + " on port: " + port + System.lineSeparator());
 
                 compositeDisposable.add(server.getObjectStream() // Compose to get ObservableTransformer
                         .subscribe(drawObject -> {
