@@ -42,7 +42,10 @@ public class Client {
                 .flatMap(or -> Observable.create(e -> {
                     try {
                         while(true){
+
+                            System.out.println("[STREAM] About to read!");
                             e.onNext(or.readObject());
+                            System.out.println("[STREAM] Read complete!");
                         }
                     } catch (Exception ex) {
                         if(!e.isDisposed()) {

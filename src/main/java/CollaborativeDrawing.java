@@ -3,18 +3,22 @@ import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.rxjavafx.observables.JavaFxObservable;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
+import javafx.util.Pair;
 
 import java.io.*;
 import java.net.Socket;
@@ -51,7 +55,8 @@ public class CollaborativeDrawing extends Application {
     private final Button hostBtn = new Button("Host");
     private final Button discBtn = new Button("Disconnect");
 
-
+    private String port;
+    private String ip;
 
     public static void main(String[] args) {
         launch(args);
@@ -186,39 +191,83 @@ public class CollaborativeDrawing extends Application {
                 .subscribe(me -> drawLine(me));
 
     }
+
+    int startServerDialog() {
+        Dialog<Integer> dialog = new Dialog<>();
+        dialog.setTitle("Create server");
+        dialog.setHeaderText("Enter port number!");
+
+// Set the button types.
+        ButtonType createServerButton = new ButtonType("Create", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(createServerButton, ButtonType.CANCEL);
+
+// Create the username and password labels and fields.
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField port = new TextField();
+
+        grid.add(new Label("Port:"), 0, 1);
+        grid.add(port, 1, 1);
+        dialog.getDialogPane().setContent(grid);
+        dialog.showAndWait();
+        //return (Integer.parseInt(port.getText()));
+        return dialog.getResult();
+    }
+
+    void joinServerDialog() {
+        Dialog<Pair<String, Integer>> dialog = new Dialog<>();
+        dialog.setTitle("Connect to server");
+        dialog.setHeaderText("Enter ip address and port number!");
+
+        // Set the button types.
+        ButtonType createServerButton = new ButtonType("Join", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(createServerButton, ButtonType.CANCEL);
+
+        // Create the username and password labels and fields.
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField ip = new TextField();
+        //ip.setPromptText("Username");
+        TextField port = new TextField();
+        //port.setPromptText("Password");
+
+        grid.add(new Label("IP address:"), 0, 0);
+        grid.add(ip, 1, 0);
+        grid.add(new Label("Port:"), 0, 1);
+        grid.add(port, 1, 1);
+        dialog.getDialogPane().setContent(grid);
+        dialog.showAndWait();
+    }
     // TODO: EXCEPTIONS!!!
     void startServer(TextArea networkText) { //TODO: Remove debug stuff!
+        int port = startServerDialog();
+        //System.out.println("Port: " + port);
         try {
 
             //System.out.println("[EXECUTING] new Server()");
-            server = new Server(12345);
+            server = new Server(port);
             isServer = true;
             //server.startServer();
 
-            networkText.appendText("Server started!" + System.lineSeparator());
+            networkText.appendText("Server started on port: " + port + System.lineSeparator());
 
-            //Observable<Socket> sock = server.getClientsVar();
-
-            /*serverDisposable = server.getObjectStream() // Compose to get ObservableTransformer
-                .subscribe(drawObject -> {
-                    networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
-                    System.out.println("[COLLADRAW RECEIVED]" + drawObject.toString() + System.lineSeparator());
-                    //server.sendToClients(drawObject);
-                    drawObject.toCanvas(context);
-                },
-                throwable -> {
-                    networkText.appendText("Server shutdown!" + System.lineSeparator());
-                    System.out.println("Server shutdown: " + throwable.toString());
-                });*/
             compositeDisposable.add(server.getObjectStream() // Compose to get ObservableTransformer
                     .subscribe(drawObject -> {
-                                networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
+                                //networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
                                 System.out.println("[COLLADRAW RECEIVED]" + drawObject.toString() + System.lineSeparator());
                                 //server.sendToClients(drawObject);
                                 drawObject.toCanvas(context);
                             },
                             throwable -> {
-                                networkText.appendText("Server shutdown!" + System.lineSeparator());
+                                // runLater() on JavaFX thread
+                                Platform.runLater(() -> networkText.appendText("Server shutdown!" + System.lineSeparator()));
+                                //networkText.appendText("Server shutdown!" + System.lineSeparator());
                                 System.out.println("Server shutdown: " + throwable.toString());
                             }));
             discBtn.setDisable(false);
@@ -232,11 +281,16 @@ public class CollaborativeDrawing extends Application {
 
     void clientConnect(TextArea networkText) {
         // Connect to server
+        joinServerDialog();
         try {
             //client = new Client("localhost", 12345);
+            System.out.println("[1. CONNECT] Before new client!");
             client = new Client("localhost", 12345);
+            System.out.println("[2. CONNECT] After new client!");
             networkText.appendText("Connected to server!" + System.lineSeparator());
+            System.out.println("[3. CONNECT] After networkText!");
             isClient = true;
+            System.out.println("[4. CONNECT] is Client!");
             //out = new DataOutputStream(socket.getOutputStream());
             //String test = "Test\n";
             //out.writeUTF(new DrawObject(2.1, 4.4).toStreamableString());
@@ -249,14 +303,17 @@ public class CollaborativeDrawing extends Application {
 
             //clientDisposable = obs.subscribe(drawObject -> {
             compositeDisposable.add(client.serverStream().subscribe(drawObject -> {
-                    networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
+                    Platform.runLater(() -> networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator()));
+                    //networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
                     System.out.println("[RECEIVED]" + drawObject.toString() + System.lineSeparator());
                     drawObject.toCanvas(context);
                 },
                     throwable -> {
-                    networkText.appendText("Disconnected from server!" + System.lineSeparator());
+                    Platform.runLater(() -> networkText.appendText("Disconnected from server!" + System.lineSeparator()));
+                    //networkText.appendText("Disconnected from server!" + System.lineSeparator());
                     System.out.println("Connection to server lost: " + throwable.toString());
                 }));
+            System.out.println("[5. CONNECT] After subscribe!");
             //client.sendToServer(new DrawObject(1.0, 1.0).toStreamString());
             //client.sendToServer(new DrawObject(1.0, 1.0));
             //client.sendToServer(new DrawObject(2.0, 2.0));
@@ -300,7 +357,7 @@ public class CollaborativeDrawing extends Application {
 
     }
 
-    void drawFreehand(MouseEvent me) throws IOException {
+    void drawFreehand(MouseEvent me) {
         if(me.getEventType() == MouseEvent.MOUSE_PRESSED) {
             xPoints.clear();
             yPoints.clear();

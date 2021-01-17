@@ -29,6 +29,7 @@ public class DrawRectangle extends DrawObject {
 
     @Override
     public void toCanvas(GraphicsContext context) {
+        System.out.println("[TO CANVAS] Starting drawing");
         //System.out.println("[START] " + toString());
         Color tempColor = (Color) context.getStroke();
         double tempLineWidth = context.getLineWidth();
@@ -39,6 +40,7 @@ public class DrawRectangle extends DrawObject {
         context.setLineWidth(tempLineWidth);
         context.setStroke(tempColor);
         //System.out.println("[END] " + toString());
+        System.out.println("[TO CANVAS] Done drawing");
     }
 
     @Override
