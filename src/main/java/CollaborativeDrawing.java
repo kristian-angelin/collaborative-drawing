@@ -9,7 +9,6 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
@@ -24,7 +23,6 @@ import javafx.util.Pair;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
 
 public class CollaborativeDrawing extends Application {
     private Canvas canvas;
@@ -220,8 +218,13 @@ public class CollaborativeDrawing extends Application {
         grid.add(port, 1, 1);
         dialog.getDialogPane().setContent(grid);
 
+
+        // Check that we have a correct port number before enabling "Create" button
         port.textProperty().addListener((observable, oldValue, newValue) -> {
-            createButton.setDisable(Integer.parseInt(newValue) < MIN_PORT_RANGE || Integer.parseInt(newValue) > MAX_PORT_RANGE);
+            // Check that we dont try to parseInt on empty String
+            if(newValue.length() > 0) {
+                createButton.setDisable(Integer.parseInt(newValue) < MIN_PORT_RANGE || Integer.parseInt(newValue) > MAX_PORT_RANGE);
+            }
         });
 
         // Convert result
@@ -230,7 +233,6 @@ public class CollaborativeDrawing extends Application {
                 if(port.getText() != null) {
                     return Integer.valueOf(port.getText());
                 }
-                //return Integer.valueOf(port.getText());
             }
             return 0; // Return 0 if cancel is pressed
         });
@@ -240,23 +242,23 @@ public class CollaborativeDrawing extends Application {
         return dialog.getResult();
     }
 
-    void joinServerDialog() {
+    Pair<String, Integer> joinServerDialog() {
         Dialog<Pair<String, Integer>> dialog = new Dialog<>();
         dialog.setTitle("Connect to server");
-        dialog.setHeaderText("Enter ip address and port number!");
+        dialog.setHeaderText("Enter ip address and port number! (Port number: " + MIN_PORT_RANGE + "-" + MAX_PORT_RANGE + ")");
 
         // Set the button types.
-        ButtonType createServerButton = new ButtonType("Join", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(createServerButton, ButtonType.CANCEL);
+        ButtonType joinServerButton = new ButtonType("Join", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(joinServerButton, ButtonType.CANCEL);
 
-        // Create the username and password labels and fields.
+        // Create the ip address and port labels and fields.
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
         grid.setPadding(new Insets(20, 150, 10, 10));
 
         TextField ip = new TextField();
-        //ip.setPromptText("Username");
+        //ip.setPromptText("Localhost");
         TextField port = new TextField();
         //port.setPromptText("Password");
 
@@ -265,7 +267,32 @@ public class CollaborativeDrawing extends Application {
         grid.add(new Label("Port:"), 0, 1);
         grid.add(port, 1, 1);
         dialog.getDialogPane().setContent(grid);
+
+        // Disable join button
+        Button joinButton = (Button) dialog.getDialogPane().lookupButton(joinServerButton);
+        joinButton.setDisable(true);
+
+        // Check that we have a correct port number before enabling "Join" button
+        port.textProperty().addListener((observable, oldValue, newValue) -> {
+            // Check that we dont try to parseInt on empty String
+            if(newValue.length() > 0) {
+                joinButton.setDisable(Integer.parseInt(newValue) < MIN_PORT_RANGE || Integer.parseInt(newValue) > MAX_PORT_RANGE);
+            }
+        });
+
+        // Convert result
+        dialog.setResultConverter(new Callback<ButtonType, Pair<String, Integer>>() {
+            @Override
+            public Pair<String, Integer> call(ButtonType buttonType) {
+                if (buttonType == joinServerButton) {
+                    return new Pair<String, Integer>(ip.getText(), Integer.valueOf(port.getText()));
+                }
+                return null;
+            }
+        });
+
         dialog.showAndWait();
+        return dialog.getResult();
     }
     // TODO: EXCEPTIONS!!!
     void startServer(TextArea networkText) { //TODO: Remove debug stuff!
@@ -307,57 +334,38 @@ public class CollaborativeDrawing extends Application {
 
     void clientConnect(TextArea networkText) {
         // Connect to server
-        joinServerDialog();
-        try {
-            //client = new Client("localhost", 12345);
-            System.out.println("[1. CONNECT] Before new client!");
-            client = new Client("localhost", 12345);
-            System.out.println("[2. CONNECT] After new client!");
-            networkText.appendText("Connected to server!" + System.lineSeparator());
-            System.out.println("[3. CONNECT] After networkText!");
-            isClient = true;
-            System.out.println("[4. CONNECT] is Client!");
-            //out = new DataOutputStream(socket.getOutputStream());
-            //String test = "Test\n";
-            //out.writeUTF(new DrawObject(2.1, 4.4).toStreamableString());
-            //client.sendToServer(new DrawObject(2.1, 4.4).toStreamableString());
-            //client.sendToServer(new DrawObject(2.1, 4.4).toStreamableString());
+        Pair<String, Integer> ipAdressAndPort = joinServerDialog();
+        if(ipAdressAndPort != null) {
+            try {
+                //client = new Client("localhost", 12345);
+                System.out.println("[1. CONNECT] Before new client!");
+                client = new Client(ipAdressAndPort.getKey(), ipAdressAndPort.getValue());
+                System.out.println("[2. CONNECT] After new client!");
+                networkText.appendText("Connected to server!" + System.lineSeparator());
+                System.out.println("[3. CONNECT] After networkText!");
+                isClient = true;
+                System.out.println("[4. CONNECT] is Client!");
 
-            //Observable<DrawObject> obs = client.serverStream();
+                compositeDisposable.add(client.serverStream().subscribe(drawObject -> {
+                            Platform.runLater(() -> networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator()));
+                            //networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
+                            System.out.println("[RECEIVED]" + drawObject.toString() + System.lineSeparator());
+                            drawObject.toCanvas(context);
+                        },
+                        throwable -> {
+                            Platform.runLater(() -> networkText.appendText("Disconnected from server!" + System.lineSeparator()));
+                            //networkText.appendText("Disconnected from server!" + System.lineSeparator());
+                            System.out.println("Connection to server lost: " + throwable.toString());
+                        }));
+                System.out.println("[5. CONNECT] After subscribe!");
 
-            //Observable<String> obs = client.serverStream();
-
-            //clientDisposable = obs.subscribe(drawObject -> {
-            compositeDisposable.add(client.serverStream().subscribe(drawObject -> {
-                    Platform.runLater(() -> networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator()));
-                    //networkText.appendText("Data: " + drawObject.toString() + System.lineSeparator());
-                    System.out.println("[RECEIVED]" + drawObject.toString() + System.lineSeparator());
-                    drawObject.toCanvas(context);
-                },
-                    throwable -> {
-                    Platform.runLater(() -> networkText.appendText("Disconnected from server!" + System.lineSeparator()));
-                    //networkText.appendText("Disconnected from server!" + System.lineSeparator());
-                    System.out.println("Connection to server lost: " + throwable.toString());
-                }));
-            System.out.println("[5. CONNECT] After subscribe!");
-            //client.sendToServer(new DrawObject(1.0, 1.0).toStreamString());
-            //client.sendToServer(new DrawObject(1.0, 1.0));
-            //client.sendToServer(new DrawObject(2.0, 2.0));
-            //out.reset();
-            //out.flush();
-            //out.writeObject(new DrawObject(20, 3));
-            //out.reset();
-            //out.flush();
-            /*Observable.<String>create(e -> {
-                networkText.appendText("Got: " + in.readUTF()); //TODO!!! GET CLIENT READING!!!!
-            })
-            .subscribe(s -> networkText.appendText("Recieved: " + s + System.lineSeparator()));*/
-            discBtn.setDisable(false);
-            connectBtn.setDisable(true);
-            hostBtn.setDisable(true);
-        } catch (IOException e) {
-            networkText.appendText("Unable to connect to server!" + System.lineSeparator());
-            System.err.println(e.toString());
+                discBtn.setDisable(false);
+                connectBtn.setDisable(true);
+                hostBtn.setDisable(true);
+            } catch (IOException e) {
+                networkText.appendText("Unable to connect to server!" + System.lineSeparator());
+                System.err.println(e.toString());
+            }
         }
     }
 
