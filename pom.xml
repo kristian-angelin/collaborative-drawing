@@ -21,7 +21,6 @@
                 <version>0.0.5</version>
                 <configuration>
                     <mainClass>CollaborativeDrawing</mainClass>
-                    <executable>/Library/Java/JavaVirtualMachines/jdk-13.0.1.jdk/Contents/Home/bin/java</executable>
                 </configuration>
             </plugin>
         </plugins>
