@@ -5,4 +5,8 @@ Simple drawing program where multiple users can work on the same image. It's a n
 ### Features ###
 - Everyone connected can see what everyone else draws.
 - New clients can connect at any time.
-- Newly connected clients recieves all previously drawn objects.
+- Newly connected clients receives all previously drawn objects.
+
+![Collaborative Drawing](img/collaborative-drawing-01.png)
+![Connect to server](img/collaborative-drawing-02.png)
+![Client/server drawing](img/collaborative-drawing-03.png)
