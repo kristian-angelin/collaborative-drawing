@@ -8,4 +8,4 @@ Simple drawing program where multiple users can work on the same image. It's a n
 - Newly connected clients receives all previously drawn objects.
 
 ![Collaborative Drawing](img/collaborative-drawing-01.png)
-![Client/server drawing](img/collaborative-drawing-02.png)git
+![Client/server drawing](img/collaborative-drawing-02.png)
